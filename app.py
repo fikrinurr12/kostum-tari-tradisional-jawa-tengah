@@ -144,7 +144,7 @@ if uploaded_file is not None:
         st.stop()
 
     with col_preview:
-        st.image(image, caption="Pratinjau gambar yang diunggah", use_container_width=True)
+        st.image(image, caption="Pratinjau gambar yang diunggah")
 
     with col_upload:
         classify_clicked = st.button("🔍 Klasifikasikan Gambar", use_container_width=True)
