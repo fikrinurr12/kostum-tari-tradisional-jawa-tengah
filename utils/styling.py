@@ -319,106 +319,69 @@ def inject_global_css():
             color: {COLORS['terracotta']} !important;
         }}
 
-        /* ── Navbar link button (st.button disulap jadi link teks) ── */
-        /* Selector dikonfirmasi LANGSUNG dari hasil inspect element
-           browser: tombol Streamlit punya data-testid="baseButton-secondary"
-           pada elemen <button> itu sendiri (bukan pada div pembungkusnya). */
+        /* ── Navbar radio (st.radio yang disulap jadi menu teks) ── */
+        /* st.radio TIDAK punya kotak/border solid seperti st.button,
+           jadi pendekatan ini jauh lebih simpel: cukup sembunyikan
+           bulatan radio bawaan dan styling label teksnya. */
 
-        /* Kecilkan gap antar kolom KHUSUS di dalam wrapper menu navbar. */
-        div.navbar-menu-wrapper [data-testid="stHorizontalBlock"] {{
-            gap: 0.2rem !important;
-        }}
-        div.navbar-menu-wrapper [data-testid="stColumn"] {{
-            width: fit-content !important;
-            flex: 0 0 auto !important;
-            min-width: 0 !important;
-            padding: 0 0.4rem !important;
+        /* Susun opsi radio jadi horizontal rapat, rata kanan */
+        div[data-testid="stRadio"] > div[role="radiogroup"] {{
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-end;
+            gap: 1.6rem;
+            flex-wrap: wrap;
         }}
 
-        /* Reset border/box langsung di elemen <button> via testid yang
-           sudah dikonfirmasi -- ini selector paling pasti, tidak
-           bergantung pada class Emotion yang acak/dinamis. */
-        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"] {{
+        /* Sembunyikan bulatan radio (elemen visual lingkaran) */
+        div[data-testid="stRadio"] label > div:first-child {{
+            display: none !important;
+        }}
+
+        /* Styling label teks supaya terlihat seperti menu link */
+        div[data-testid="stRadio"] label {{
             background-color: transparent !important;
-            background: transparent !important;
-            border: 0 !important;
-            border-style: none !important;
-            border-width: 0 !important;
-            border-color: transparent !important;
+            border: none !important;
             box-shadow: none !important;
-            outline: none !important;
-            padding: 0.3rem 0.5rem !important;
+            padding: 0.3rem 0 !important;
+            margin: 0 !important;
+            cursor: pointer;
+        }}
+        div[data-testid="stRadio"] label p {{
             font-weight: 600;
             font-size: 0.95rem;
-            white-space: nowrap;
+            color: {COLORS['ink_soft']};
         }}
-        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"]:hover,
-        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"]:focus,
-        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"]:active,
-        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"]:focus:not(:active) {{
-            background-color: transparent !important;
-            background: transparent !important;
-            border: 0 !important;
-            border-style: none !important;
-            box-shadow: none !important;
-            outline: none !important;
-            color: {COLORS['terracotta']} !important;
-        }}
-        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"] p {{
-            margin: 0;
-        }}
-        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"]:hover p,
-        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"]:focus p {{
-            color: {COLORS['terracotta']} !important;
-        }}
-
-        /* Warna aktif vs inactive lewat marker sibling div */
-        div.navbtn-active + div[data-testid="stButton"] button,
-        div.navbtn-active + div[data-testid="stButton"] button p {{
+        /* Opsi yang sedang dipilih (aktif) ditandai Streamlit lewat
+           atribut aria-checked pada elemen radio di dalam label. */
+        div[data-testid="stRadio"] label:has(input:checked) p {{
             color: {COLORS['terracotta']} !important;
             font-weight: 700;
         }}
-        div.navbtn-inactive + div[data-testid="stButton"] button,
-        div.navbtn-inactive + div[data-testid="stButton"] button p {{
-            color: {COLORS['ink_soft']} !important;
+        div[data-testid="stRadio"] label:hover p {{
+            color: {COLORS['terracotta']} !important;
+        }}
+
+        /* Sembunyikan elemen radio asli (input) tapi tetap ada di DOM
+           supaya tetap bisa diklik/fungsional, hanya visualnya hilang. */
+        div[data-testid="stRadio"] input[type="radio"] {{
+            position: absolute;
+            opacity: 0;
+            width: 1px;
+            height: 1px;
         }}
 
         /* ── Navbar responsif di mobile: paksa tetap horizontal ──── */
-        /* Streamlit secara default men-stack st.columns jadi vertikal
-           di layar sempit (<~640px). Aturan ini menimpa perilaku itu
-           KHUSUS untuk wrapper menu navbar, supaya 3 tombol tetap
-           sejajar horizontal meski dibuka di HP. */
         @media (max-width: 640px) {{
-            div.navbar-menu-wrapper [data-testid="stHorizontalBlock"] {{
-                flex-direction: row !important;
-                flex-wrap: nowrap !important;
-                gap: 0.1rem !important;
+            div[data-testid="stRadio"] > div[role="radiogroup"] {{
+                gap: 0.9rem;
+                justify-content: flex-start;
             }}
-            div.navbar-menu-wrapper [data-testid="stColumn"] {{
-                width: fit-content !important;
-                flex: 0 0 auto !important;
-                padding: 0 0.15rem !important;
-            }}
-            div.navbar-menu-wrapper button[data-testid="baseButton-secondary"] {{
-                font-size: 0.78rem !important;
-                padding: 0.2rem 0.3rem !important;
-            }}
-            /* Baris terluar (brand + grup menu) juga dipaksa tetap
-               horizontal di mobile, supaya brand tidak terpisah jauh
-               ke atas sendirian seperti pada layout default Streamlit.
-               Ditarget lewat sibling selector dari marker div, karena
-               st.container(key=...) TIDAK didukung di Streamlit 1.36.0. */
-            div.navbar-outer-marker + [data-testid="stHorizontalBlock"] {{
-                flex-direction: row !important;
-                flex-wrap: nowrap !important;
-                align-items: center !important;
-            }}
-            div.navbar-outer-marker + [data-testid="stHorizontalBlock"] [data-testid="stColumn"] {{
-                width: auto !important;
-                min-width: 0 !important;
+            div[data-testid="stRadio"] label p {{
+                font-size: 0.82rem;
             }}
             .navbar-brand {{
-                font-size: 1.1rem !important;
+                font-size: 1.15rem !important;
             }}
         }}
 
@@ -460,13 +423,14 @@ def eyebrow(text: str):
 def render_navbar(active_page: str = "Home"):
     """
     Navbar FUNGSIONAL: brand kiri (HTML statis) + menu kanan berupa
-    st.button yang di-styling ulang lewat CSS agar terlihat seperti
-    link teks biasa (tanpa kotak tombol solid), warna berubah saat
-    halaman tersebut sedang aktif.
+    st.radio horizontal yang bulatannya disembunyikan lewat CSS,
+    sehingga terlihat seperti menu teks biasa.
 
-    st.button dipilih (bukan <a> HTML) karena Streamlit TIDAK mendukung
-    navigasi antar-halaman lewat tag HTML murni di multipage app --
-    perlu komponen native Streamlit yang bisa memicu st.switch_page().
+    st.radio dipilih (bukan <a> HTML atau st.button) karena pendekatan
+    button sebelumnya tetap menyisakan border/box yang sulit dihapus
+    sepenuhnya di semua kondisi (hover/focus/active) tanpa mengetahui
+    persis struktur CSS internal Streamlit. st.radio horizontal lebih
+    predictable untuk displai sebagai menu teks polos.
 
     Mengembalikan True jika terjadi perpindahan halaman (supaya kode
     pemanggil tahu harus st.stop() / tidak lanjut render lebih jauh).
@@ -483,39 +447,28 @@ def render_navbar(active_page: str = "Home"):
     if active_page == "Tentang":
         active_page = "Tentang ML"
 
-    # Catatan: TIDAK memakai st.container(key=...) karena parameter
-    # 'key' pada st.container() belum tersedia di Streamlit 1.36.0
-    # yang dipin di requirements.txt (fitur ini baru di versi lebih
-    # baru). Dipakai marker div sederhana + sibling selector CSS
-    # sebagai gantinya -- konsisten dengan pendekatan yang sudah
-    # terbukti aman di bagian lain navbar ini.
-    st.markdown('<div class="navbar-outer-marker"></div>', unsafe_allow_html=True)
-    col_brand, col_menu = st.columns([3, 2.2])
+    col_brand, col_menu = st.columns([2, 3])
 
     with col_brand:
         st.markdown(
-            '<div class="navbar-brand" style="padding-top:0.3rem;">Tari<span>Jateng</span></div>',
+            '<div class="navbar-brand" style="padding-top:0.5rem;">Tari<span>Jateng</span></div>',
             unsafe_allow_html=True,
         )
 
-    switched_to = None
     with col_menu:
-        st.markdown('<div class="navbar-menu-wrapper">', unsafe_allow_html=True)
-        btn_cols = st.columns(len(pages))
-        for col, page_name in zip(btn_cols, pages):
-            with col:
-                is_active = (page_name == active_page)
-                btn_class_marker = "navbtn-active" if is_active else "navbtn-inactive"
-                st.markdown(f'<div class="{btn_class_marker}">', unsafe_allow_html=True)
-                if st.button(page_name, key=f"navbtn_{page_name}", type="secondary"):
-                    switched_to = page_name
-                st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        selected = st.radio(
+            "Navigasi",
+            options=pages,
+            index=pages.index(active_page) if active_page in pages else 0,
+            horizontal=True,
+            label_visibility="collapsed",
+            key="main_navbar_radio",
+        )
 
     st.markdown('<hr class="thin-divider" style="margin-top:0.5rem;">', unsafe_allow_html=True)
 
-    if switched_to and switched_to != active_page:
-        target_file = page_files[switched_to]
+    if selected != active_page:
+        target_file = page_files[selected]
         st.switch_page(target_file)
         return True
     return False
