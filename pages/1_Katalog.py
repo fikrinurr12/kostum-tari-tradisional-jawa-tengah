@@ -35,9 +35,6 @@ if _switched:
 # ─────────────────────────────────────────────────────────────────
 # HEADER
 # ─────────────────────────────────────────────────────────────────
-st.markdown(
-    '<div class="center-text">', unsafe_allow_html=True
-)
 st.markdown("# Katalog Kostum & Tari")
 st.markdown(
     '<p class="lead-text" style="margin:0 auto; text-align:center;">'
@@ -46,7 +43,6 @@ st.markdown(
     "</p>",
     unsafe_allow_html=True,
 )
-st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
 focus_key = st.session_state.get("catalog_focus")
@@ -147,12 +143,9 @@ def render_catalog_card(key):
             unsafe_allow_html=True,
         )
 
-        with st.expander(f"Lihat detail {info['nama_tampilan']}"):
-            st.markdown(info["deskripsi"])
-            st.markdown("**Ciri khas kostum:**")
-            for ciri in info["ciri_kostum"]:
-                st.markdown(f"- {ciri}")
-            st.markdown(f"*💡 {info['fakta_singkat']}*")
+        if st.button(f"Lihat detail {info['nama_tampilan']}", key=f"detail_btn_{key}", use_container_width=True):
+            st.session_state["detail_tari_key"] = key
+            st.switch_page("pages/3_Detail_Tari.py")
 
 
 # Baris pertama: 2 kartu besar (jika tersedia minimal 2 item)

@@ -53,10 +53,8 @@ if _switched:
 
 
 # ─────────────────────────────────────────────────────────────────
-# HERO / BERANDA -- judul terpusat di atas, kartu upload di tengah,
-# foto dekoratif di belakang (gaya referensi landing page baru)
+# HERO / BERANDA -- judul terpusat di atas, kartu upload di tengah
 # ─────────────────────────────────────────────────────────────────
-st.markdown('<div class="center-text">', unsafe_allow_html=True)
 st.markdown(
     '<h1 style="margin-bottom:1rem;">Kenali Warisan Budaya<br>Lewat Satu Foto.</h1>',
     unsafe_allow_html=True,
@@ -67,22 +65,10 @@ st.markdown(
     "kostum tari tradisional Jawa Tengah secara instan.</p>",
     unsafe_allow_html=True,
 )
-st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
-
-# Foto dekoratif (kalau ada) ditampilkan sebagai backdrop di belakang
-# kartu upload, mengikuti komposisi referensi.
-hero_photo_path = None
-for k in config.CLASS_ORDER:
-    candidate = config.get_catalog_image_path(k)
-    if candidate:
-        hero_photo_path = candidate
-        break
 
 col_hero_left, col_hero_center, col_hero_right = st.columns([0.6, 1.6, 0.6])
 with col_hero_center:
-    if hero_photo_path:
-        st.image(hero_photo_path)
     badges = "".join(
         f'<span class="badge">{config.DANCE_CATALOG[k]["nama_tampilan"]}</span>'
         for k in config.CLASS_ORDER

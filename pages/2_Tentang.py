@@ -97,7 +97,6 @@ if _switched:
 # ─────────────────────────────────────────────────────────────────
 # HEADER
 # ─────────────────────────────────────────────────────────────────
-st.markdown('<div class="center-text">', unsafe_allow_html=True)
 st.markdown("# Spesifikasi & Performa Model")
 st.markdown(
     '<p class="lead-text" style="margin:0 auto; text-align:center;">'
@@ -106,7 +105,6 @@ st.markdown(
     "</p>",
     unsafe_allow_html=True,
 )
-st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
 # Muat data evaluasi (dipakai di beberapa kartu di bawah)
@@ -150,7 +148,28 @@ st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
 styling.eyebrow("Performa")
 st.markdown("## Metrik Evaluasi Model")
 
-dataset_total = eval_data.get("dataset_total") if eval_data else None
+dataset_total = None
+if eval_data:
+    # Coba beberapa kemungkinan nama field, karena notebook training
+    # mungkin menyimpannya dengan nama berbeda (dataset_total / total_data
+    # / jumlah_data / dsb) tergantung versi notebook yang dipakai.
+    for field_name in ("dataset_total", "total_dataset", "total_data", "jumlah_data"):
+        if eval_data.get(field_name):
+            dataset_total = eval_data.get(field_name)
+            break
+    # Coba juga di level root model_config.json (bukan di dalam "evaluation"),
+    # untuk kasus field disimpan sejajar dengan "evaluation", bukan di dalamnya.
+    if dataset_total is None and "model_config_json" in dir():
+        for field_name in ("dataset_total", "total_dataset"):
+            if model_config_json.get(field_name):
+                dataset_total = model_config_json.get(field_name)
+                break
+
+# Fallback terakhir: konstanta manual di config.py, supaya kartu tidak
+# kosong sama sekali sambil menunggu model_config.json diperbarui.
+if dataset_total is None:
+    dataset_total = config.FALLBACK_DATASET_TOTAL
+
 accuracy_val = eval_data.get("accuracy") if eval_data else None
 precision_val = eval_data.get("precision") if eval_data else None
 recall_val = eval_data.get("recall") if eval_data else None
@@ -158,7 +177,7 @@ recall_val = eval_data.get("recall") if eval_data else None
 m1, m2, m3, m4 = st.columns(4)
 with m1:
     with st.container(border=True):
-        st.metric(label="Total Dataset", value=f"{dataset_total}+ Gambar" if dataset_total else "—")
+        st.metric(label="Total Dataset", value=f"{dataset_total} Gambar" if dataset_total else "Belum diisi")
 with m2:
     with st.container(border=True):
         st.metric(label="Akurasi Model", value=f"{accuracy_val * 100:.1f}%" if accuracy_val else "—")

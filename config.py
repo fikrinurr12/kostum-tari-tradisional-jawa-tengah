@@ -27,6 +27,13 @@ CATALOG_IMG_DIR = os.path.join(ASSETS_DIR, "catalog")
 IMG_SIZE = (224, 224)
 CONFIDENCE_THRESHOLD = 40.0  # % minimum sebelum dianggap "kurang yakin"
 
+# Fallback manual jika model_config.json tidak/belum menyimpan field
+# dataset total (dipakai di halaman Tentang -> kartu "Total Dataset").
+# Update angka ini secara manual jika dataset training berubah, atau
+# lebih baik: tambahkan field "dataset_total" ke model_config.json
+# langsung dari notebook training agar selalu akurat otomatis.
+FALLBACK_DATASET_TOTAL = 1335
+
 # ─────────────────────────────────────────────────────────────────
 # DETEKSI GAMBAR "TIDAK SESUAI" (di luar 5 kelas kostum tari)
 # ─────────────────────────────────────────────────────────────────

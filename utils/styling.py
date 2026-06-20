@@ -90,6 +90,7 @@ def inject_global_css():
 
         h1 {{
             font-size: 2.7rem !important;
+            text-align: center;
         }}
 
         p, span, div, label {{
@@ -318,28 +319,42 @@ def inject_global_css():
             color: {COLORS['terracotta']} !important;
         }}
 
-        /* ── Navbar radio (st.radio yang disulap jadi menu teks) ── */
-        /* Sembunyikan bulatan radio bawaan, sisakan label teksnya saja */
-        div[data-testid="stRadio"] > div {{
-            display: flex;
-            justify-content: flex-end;
-            gap: 1.8rem;
-            flex-wrap: nowrap;
-        }}
-        div[data-testid="stRadio"] label {{
+        /* ── Navbar link button (st.button disulap jadi link teks) ── */
+        /* Marker div (navbtn-active/inactive) berada SEBELUM elemen
+           tombol Streamlit (sibling, bukan parent-child, karena
+           st.markdown dan st.button dirender sebagai elemen sejajar).
+           Maka dipakai selector "+" (adjacent sibling) untuk menata
+           tombol yang baru saja didahului oleh marker tersebut. */
+        div.navbtn-active + div[data-testid="stButton"] button,
+        div.navbtn-inactive + div[data-testid="stButton"] button {{
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0.3rem 0 !important;
             font-weight: 600;
             font-size: 0.95rem;
-            color: {COLORS['ink_soft']};
-            cursor: pointer;
         }}
-        div[data-testid="stRadio"] label[data-checked="true"] {{
+        div.navbtn-active + div[data-testid="stButton"] button {{
             color: {COLORS['terracotta']} !important;
         }}
-        div[data-testid="stRadio"] input[type="radio"] {{
-            display: none;
+        div.navbtn-active + div[data-testid="stButton"] button p {{
+            color: {COLORS['terracotta']} !important;
+            font-weight: 700;
         }}
-        div[data-testid="stRadio"] svg {{
-            display: none;
+        div.navbtn-inactive + div[data-testid="stButton"] button {{
+            color: {COLORS['ink_soft']} !important;
+        }}
+        div.navbtn-inactive + div[data-testid="stButton"] button p {{
+            color: {COLORS['ink_soft']} !important;
+        }}
+        div.navbtn-active + div[data-testid="stButton"] button:hover,
+        div.navbtn-inactive + div[data-testid="stButton"] button:hover {{
+            color: {COLORS['terracotta']} !important;
+            background-color: transparent !important;
+        }}
+        div.navbtn-active + div[data-testid="stButton"] button:hover p,
+        div.navbtn-inactive + div[data-testid="stButton"] button:hover p {{
+            color: {COLORS['terracotta']} !important;
         }}
 
         /* ── Chart container (Confusion Matrix / Accuracy) ──────── */
@@ -379,11 +394,12 @@ def eyebrow(text: str):
 
 def render_navbar(active_page: str = "Home"):
     """
-    Navbar FUNGSIONAL: brand kiri (HTML statis) + menu kanan (st.radio
-    horizontal yang di-styling ulang lewat CSS agar terlihat seperti
-    menu teks, bukan radio button bulat biasa).
+    Navbar FUNGSIONAL: brand kiri (HTML statis) + menu kanan berupa
+    st.button yang di-styling ulang lewat CSS agar terlihat seperti
+    link teks biasa (tanpa kotak tombol solid), warna berubah saat
+    halaman tersebut sedang aktif.
 
-    st.radio dipilih (bukan <a> HTML) karena Streamlit TIDAK mendukung
+    st.button dipilih (bukan <a> HTML) karena Streamlit TIDAK mendukung
     navigasi antar-halaman lewat tag HTML murni di multipage app --
     perlu komponen native Streamlit yang bisa memicu st.switch_page().
 
@@ -402,28 +418,33 @@ def render_navbar(active_page: str = "Home"):
     if active_page == "Tentang":
         active_page = "Tentang ML"
 
-    col_brand, col_menu = st.columns([1, 2])
+    col_brand, col_m1, col_m2, col_m3 = st.columns([3, 1, 1, 1.3])
 
     with col_brand:
         st.markdown(
-            '<div class="navbar-brand" style="padding-top:0.4rem;">Tari<span>Jateng</span></div>',
+            '<div class="navbar-brand" style="padding-top:0.3rem;">Tari<span>Jateng</span></div>',
             unsafe_allow_html=True,
         )
 
-    with col_menu:
-        selected = st.radio(
-            "Navigasi",
-            options=pages,
-            index=pages.index(active_page) if active_page in pages else 0,
-            horizontal=True,
-            label_visibility="collapsed",
-            key="main_navbar_radio",
-        )
+    switched_to = None
+    for col, page_name in zip([col_m1, col_m2, col_m3], pages):
+        with col:
+            is_active = (page_name == active_page)
+            # Catatan: type="tertiary" TIDAK dipakai karena belum pasti
+            # tersedia di Streamlit 1.36.0 yang dipin di requirements.txt
+            # (parameter ini relatif baru). Pakai "secondary" yang sudah
+            # lama didukung, lalu CSS (.navbar-link-btn) yang menghapus
+            # tampilan kotak/border supaya terlihat seperti link teks.
+            btn_class_marker = "navbtn-active" if is_active else "navbtn-inactive"
+            st.markdown(f'<div class="{btn_class_marker}">', unsafe_allow_html=True)
+            if st.button(page_name, key=f"navbtn_{page_name}", type="secondary"):
+                switched_to = page_name
+            st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<hr class="thin-divider" style="margin-top:0.5rem;">', unsafe_allow_html=True)
 
-    if selected != active_page:
-        target_file = page_files[selected]
+    if switched_to and switched_to != active_page:
+        target_file = page_files[switched_to]
         st.switch_page(target_file)
         return True
     return False
