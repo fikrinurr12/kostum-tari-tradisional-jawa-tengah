@@ -13,7 +13,12 @@
 # - Wajib pin Python ke 3.11 lewat runtime.txt (lihat file tersebut),
 #   karena TensorFlow 2.15 belum tersedia untuk Python 3.12/3.13.
 
+# streamlit==1.36.0
+# tensorflow-cpu==2.15.0
+# numpy==1.26.4
+# pillow==10.3.0
+
 streamlit==1.36.0
-tensorflow-cpu==2.15.0
-numpy==1.26.4
+tensorflow-cpu==2.20.0
+numpy>=1.26.0
 pillow==10.3.0
