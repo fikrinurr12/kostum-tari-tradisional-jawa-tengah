@@ -47,7 +47,9 @@ with st.sidebar:
 # ─────────────────────────────────────────────────────────────────
 # NAVBAR
 # ─────────────────────────────────────────────────────────────────
-styling.render_navbar(active_page="Home")
+_switched = styling.render_navbar(active_page="Home")
+if _switched:
+    st.stop()
 
 
 # ─────────────────────────────────────────────────────────────────

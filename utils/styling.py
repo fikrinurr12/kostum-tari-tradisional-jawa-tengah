@@ -261,31 +261,6 @@ def inject_global_css():
             line-height: 1.55;
         }}
 
-        /* ── Diagram arsitektur model (kotak terhubung) ────────── */
-        .arch-box {{
-            background-color: white;
-            border: 1.5px solid {COLORS['border']};
-            border-radius: 8px;
-            padding: 0.55rem 0.9rem;
-            text-align: center;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: {COLORS['ink']};
-            margin: 0 auto 0.5rem auto;
-            max-width: 220px;
-        }}
-        .arch-box.highlight {{
-            background-color: {COLORS['terracotta_soft']};
-            border-color: {COLORS['terracotta']};
-            color: {COLORS['terracotta_dark']};
-        }}
-        .arch-arrow {{
-            text-align: center;
-            color: {COLORS['ink_soft']};
-            font-size: 1.1rem;
-            margin: -0.15rem 0 0.15rem 0;
-        }}
-
         /* ── Divider tipis ──────────────────────────────────────── */
         .thin-divider {{
             border: none;
@@ -343,6 +318,30 @@ def inject_global_css():
             color: {COLORS['terracotta']} !important;
         }}
 
+        /* ── Navbar radio (st.radio yang disulap jadi menu teks) ── */
+        /* Sembunyikan bulatan radio bawaan, sisakan label teksnya saja */
+        div[data-testid="stRadio"] > div {{
+            display: flex;
+            justify-content: flex-end;
+            gap: 1.8rem;
+            flex-wrap: nowrap;
+        }}
+        div[data-testid="stRadio"] label {{
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: {COLORS['ink_soft']};
+            cursor: pointer;
+        }}
+        div[data-testid="stRadio"] label[data-checked="true"] {{
+            color: {COLORS['terracotta']} !important;
+        }}
+        div[data-testid="stRadio"] input[type="radio"] {{
+            display: none;
+        }}
+        div[data-testid="stRadio"] svg {{
+            display: none;
+        }}
+
         /* ── Chart container (Confusion Matrix / Accuracy) ──────── */
         .chart-box {{
             background-color: white;
@@ -380,28 +379,54 @@ def eyebrow(text: str):
 
 def render_navbar(active_page: str = "Home"):
     """
-    Navbar kustom bergaya referensi: brand kiri, menu kanan.
-    Karena Streamlit tidak mendukung navigasi HTML murni antar-halaman
-    multipage app, menu di sini bersifat visual/penanda halaman aktif --
-    navigasi sungguhan tetap lewat sidebar bawaan Streamlit atau tombol.
-    """
-    pages = ["Home", "Katalog", "Tentang ML"]
-    menu_html = ""
-    for p in pages:
-        is_active = (p == active_page) or (p == "Tentang ML" and active_page == "Tentang")
-        weight = "700" if is_active else "500"
-        color = "#B5663F" if is_active else "#6B6B6B"
-        menu_html += f'<span style="margin-left:1.8rem; font-size:0.92rem; font-weight:{weight}; color:{color};">{p}</span>'
+    Navbar FUNGSIONAL: brand kiri (HTML statis) + menu kanan (st.radio
+    horizontal yang di-styling ulang lewat CSS agar terlihat seperti
+    menu teks, bukan radio button bulat biasa).
 
-    st.markdown(
-        f"""
-        <div class="navbar">
-            <div class="navbar-brand">Tari<span>Jateng</span></div>
-            <div>{menu_html}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.radio dipilih (bukan <a> HTML) karena Streamlit TIDAK mendukung
+    navigasi antar-halaman lewat tag HTML murni di multipage app --
+    perlu komponen native Streamlit yang bisa memicu st.switch_page().
+
+    Mengembalikan True jika terjadi perpindahan halaman (supaya kode
+    pemanggil tahu harus st.stop() / tidak lanjut render lebih jauh).
+    """
+    page_files = {
+        "Home": "app.py",
+        "Katalog": "pages/1_Katalog.py",
+        "Tentang ML": "pages/2_Tentang.py",
+    }
+    pages = list(page_files.keys())
+
+    # Normalisasi: kalau dipanggil dengan "Tentang" (label lama),
+    # tetap cocokkan ke "Tentang ML".
+    if active_page == "Tentang":
+        active_page = "Tentang ML"
+
+    col_brand, col_menu = st.columns([1, 2])
+
+    with col_brand:
+        st.markdown(
+            '<div class="navbar-brand" style="padding-top:0.4rem;">Tari<span>Jateng</span></div>',
+            unsafe_allow_html=True,
+        )
+
+    with col_menu:
+        selected = st.radio(
+            "Navigasi",
+            options=pages,
+            index=pages.index(active_page) if active_page in pages else 0,
+            horizontal=True,
+            label_visibility="collapsed",
+            key="main_navbar_radio",
+        )
+
+    st.markdown('<hr class="thin-divider" style="margin-top:0.5rem;">', unsafe_allow_html=True)
+
+    if selected != active_page:
+        target_file = page_files[selected]
+        st.switch_page(target_file)
+        return True
+    return False
 
 
 def render_footer():

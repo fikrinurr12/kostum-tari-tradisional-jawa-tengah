@@ -27,7 +27,9 @@ with st.sidebar:
     if st.button("⬅️ Kembali ke Beranda", use_container_width=True):
         st.switch_page("app.py")
 
-styling.render_navbar(active_page="Katalog")
+_switched = styling.render_navbar(active_page="Katalog")
+if _switched:
+    st.stop()
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -120,35 +122,37 @@ def render_catalog_card(key):
     accent = info["warna_aksen"]
     photo_path = config.get_catalog_image_path(key)
 
-    st.markdown('<div class="catalog-card">', unsafe_allow_html=True)
+    # PENTING: st.markdown('<div>...') dan st.image() TIDAK bisa di-nest
+    # dalam satu div HTML manual -- Streamlit merender tiap panggilan
+    # sebagai elemen DOM sejajar, bukan nested, sehingga div pembungkus
+    # kosong akan tampak sebagai kotak terpisah tanpa isi (bug yang
+    # terlihat di versi sebelumnya). st.container(border=True) adalah
+    # cara yang BENAR-BENAR membungkus widget di dalamnya.
+    with st.container(border=True):
+        if photo_path:
+            st.image(photo_path)
+        else:
+            icon = PLACEHOLDER_ICONS.get(key, "🪭")
+            st.markdown(
+                f'<div class="catalog-card-image" style="color:{accent};">{icon}</div>',
+                unsafe_allow_html=True,
+            )
 
-    if photo_path:
-        st.markdown('<div class="catalog-card-image">', unsafe_allow_html=True)
-        st.image(photo_path)
-        st.markdown('</div>', unsafe_allow_html=True)
-    else:
-        icon = PLACEHOLDER_ICONS.get(key, "🪭")
         st.markdown(
-            f'<div class="catalog-card-image" style="color:{accent};">{icon}</div>',
+            f"""
+            <div class="catalog-card-title">{info['nama_tampilan']}</div>
+            <p class="catalog-card-desc">{info['ringkasan']}</p>
+            <span class="badge" style="margin-top:0.5rem;">{info['asal']}</span>
+            """,
             unsafe_allow_html=True,
         )
 
-    st.markdown(
-        f"""
-        <div class="catalog-card-title">{info['nama_tampilan']}</div>
-        <p class="catalog-card-desc">{info['ringkasan']}</p>
-        <span class="badge" style="margin-top:0.5rem;">{info['asal']}</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    with st.expander(f"Lihat detail {info['nama_tampilan']}"):
-        st.markdown(info["deskripsi"])
-        st.markdown("**Ciri khas kostum:**")
-        for ciri in info["ciri_kostum"]:
-            st.markdown(f"- {ciri}")
-        st.markdown(f"*💡 {info['fakta_singkat']}*")
+        with st.expander(f"Lihat detail {info['nama_tampilan']}"):
+            st.markdown(info["deskripsi"])
+            st.markdown("**Ciri khas kostum:**")
+            for ciri in info["ciri_kostum"]:
+                st.markdown(f"- {ciri}")
+            st.markdown(f"*💡 {info['fakta_singkat']}*")
 
 
 # Baris pertama: 2 kartu besar (jika tersedia minimal 2 item)

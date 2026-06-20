@@ -89,7 +89,9 @@ with st.sidebar:
     if st.button("⬅️ Kembali ke Beranda", use_container_width=True):
         st.switch_page("app.py")
 
-styling.render_navbar(active_page="Tentang")
+_switched = styling.render_navbar(active_page="Tentang ML")
+if _switched:
+    st.stop()
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -119,90 +121,61 @@ if os.path.exists(config.MODEL_CONFIG_PATH):
 
 
 # ─────────────────────────────────────────────────────────────────
-# BARIS KARTU UTAMA: Arsitektur Model | Key Metrics | Inference
+# SECTION 1: RINGKASAN ARSITEKTUR (st.info + teks naratif)
 # ─────────────────────────────────────────────────────────────────
-col1, col2, col3 = st.columns([1.1, 1, 1], gap="medium")
+styling.eyebrow("Arsitektur")
+col_arch_left, col_arch_right = st.columns([1, 2], gap="large")
 
-with col1:
+with col_arch_left:
+    st.info("**MobileNetV2** (Fine-tuned)")
+
+with col_arch_right:
     st.markdown(
-        """
-        <div class="metric-box">
-            <div class="metric-label">1. Model Architecture</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    # Diagram arsitektur sederhana, kotak terhubung vertikal
-    st.markdown(
-        f"""
-        <div class="arch-box highlight">MobileNetV2 (Pretrained)</div>
-        <div class="arch-arrow">↓</div>
-        <div class="arch-box">Global Average Pooling</div>
-        <div class="arch-arrow">↓</div>
-        <div class="arch-box">Dense 256 + BatchNorm + ReLU</div>
-        <div class="arch-arrow">↓</div>
-        <div class="arch-box">Dropout 0.3</div>
-        <div class="arch-arrow">↓</div>
-        <div class="arch-box">Dense 128 + BatchNorm + ReLU</div>
-        <div class="arch-arrow">↓</div>
-        <div class="arch-box">Dropout 0.15</div>
-        <div class="arch-arrow">↓</div>
-        <div class="arch-box highlight">Dense 5 (Softmax)</div>
-        """,
+        '<p class="lead-text">MobileNetV2 dipilih karena ukurannya yang '
+        "ringan namun tetap akurat untuk klasifikasi citra, menjadikannya "
+        "ideal untuk diterapkan pada aplikasi web seperti ini. Model "
+        "dilatih ulang (transfer learning) dengan dua fase: ekstraksi "
+        "fitur pada lapisan dasar yang dibekukan, lalu fine-tuning pada "
+        "lapisan akhir agar dapat mengenali pola visual khas lima "
+        "kostum tari tradisional Jawa Tengah.</p>",
         unsafe_allow_html=True,
     )
 
-with col2:
-    datasets_total = "1335+ Gambar"
-    if eval_data and eval_data.get("dataset_total"):
-        datasets_total = f"{eval_data['dataset_total']} Gambar"
+st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
 
-    accuracy_pct = f"{eval_data.get('accuracy', 0) * 100:.1f}%" if eval_data else "—"
-    precision_pct = f"{eval_data.get('precision', 0) * 100:.1f}%" if eval_data else "—"
-    recall_pct = f"{eval_data.get('recall', 0) * 100:.1f}%" if eval_data else "—"
 
-    st.markdown(
-        f"""
-        <div class="metric-box">
-            <div class="metric-label">2. Key Metrics</div>
-            <p class="muted-text" style="margin-bottom:0.2rem;">Dataset</p>
-            <div class="metric-value" style="font-size:1.3rem; margin-bottom:0.9rem;">{datasets_total}</div>
-            <p class="muted-text" style="margin-bottom:0.2rem;">Accuracy</p>
-            <div class="metric-value" style="font-size:1.3rem; margin-bottom:0.9rem;">{accuracy_pct}</div>
-            <p class="muted-text" style="margin-bottom:0.2rem;">Precision</p>
-            <div class="metric-value" style="font-size:1.3rem; margin-bottom:0.9rem;">{precision_pct}</div>
-            <p class="muted-text" style="margin-bottom:0.2rem;">Recall</p>
-            <div class="metric-value" style="font-size:1.3rem;">{recall_pct}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+# ─────────────────────────────────────────────────────────────────
+# SECTION 2: METRIK PERFORMA (Bento Grid -- st.metric 4 kolom)
+# ─────────────────────────────────────────────────────────────────
+styling.eyebrow("Performa")
+st.markdown("## Metrik Evaluasi Model")
 
-with col3:
-    f1_pct = f"{eval_data.get('f1_score', 0) * 100:.1f}%" if eval_data else "—"
-    epoch_total = eval_data.get("epoch_total", "—") if eval_data else "—"
+dataset_total = eval_data.get("dataset_total") if eval_data else None
+accuracy_val = eval_data.get("accuracy") if eval_data else None
+precision_val = eval_data.get("precision") if eval_data else None
+recall_val = eval_data.get("recall") if eval_data else None
 
-    st.markdown(
-        f"""
-        <div class="metric-box">
-            <div class="metric-label">3. Hasil Pelatihan</div>
-            <p class="muted-text" style="margin-bottom:0.2rem;">F1-Score</p>
-            <div class="metric-value" style="margin-bottom:1.2rem;">{f1_pct}</div>
-            <p class="muted-text" style="margin-bottom:0.2rem;">Total Epoch</p>
-            <div class="metric-value">{epoch_total}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+m1, m2, m3, m4 = st.columns(4)
+with m1:
+    with st.container(border=True):
+        st.metric(label="Total Dataset", value=f"{dataset_total}+ Gambar" if dataset_total else "—")
+with m2:
+    with st.container(border=True):
+        st.metric(label="Akurasi Model", value=f"{accuracy_val * 100:.1f}%" if accuracy_val else "—")
+with m3:
+    with st.container(border=True):
+        st.metric(label="Precision", value=f"{precision_val * 100:.1f}%" if precision_val else "—")
+with m4:
+    with st.container(border=True):
+        st.metric(label="Recall", value=f"{recall_val * 100:.1f}%" if recall_val else "—")
 
-    if eval_data:
-        target_met = (eval_data.get("accuracy") or 0) >= 0.80
-        if target_met:
-            st.success("✅ Target akurasi ≥80% tercapai.")
-        else:
-            st.warning("⚠️ Akurasi di bawah target 80%.")
-
-if not eval_data:
+if eval_data:
+    target_met = (eval_data.get("accuracy") or 0) >= 0.80
+    if target_met:
+        st.success("✅ Model mencapai target akurasi minimal 80% yang ditetapkan dalam penelitian.")
+    else:
+        st.warning("⚠️ Akurasi model saat ini berada di bawah target 80% yang ditetapkan dalam penelitian.")
+else:
     st.info(
         "Data evaluasi model (`model_config.json`) belum tersedia di "
         "folder `models/`. Unggah file tersebut untuk menampilkan "
@@ -210,6 +183,7 @@ if not eval_data:
     )
 
 st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
+
 
 
 # ─────────────────────────────────────────────────────────────────
