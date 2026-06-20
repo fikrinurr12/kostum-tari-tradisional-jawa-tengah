@@ -74,28 +74,10 @@ if focus_key and focus_key in config.DANCE_CATALOG:
     st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
 
 
-# ─────────────────────────────────────────────────────────────────
-# FILTER / PENCARIAN SEDERHANA
-# ─────────────────────────────────────────────────────────────────
-search_query = st.text_input(
-    "Cari nama tari...",
-    placeholder="🔍  Cari nama tari, misalnya Bedhaya atau Gambyong...",
-    label_visibility="collapsed",
-)
-
 display_keys = [
     k for k in config.CLASS_ORDER
     if not focus_key or k != focus_key  # jangan tampilkan dua kali kelas yang sudah disorot
 ]
-
-if search_query.strip():
-    display_keys = [
-        k for k in display_keys
-        if search_query.strip().lower() in config.DANCE_CATALOG[k]["nama_tampilan"].lower()
-    ]
-
-if not display_keys:
-    st.info("Tidak ada tarian yang cocok dengan pencarian kamu.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 

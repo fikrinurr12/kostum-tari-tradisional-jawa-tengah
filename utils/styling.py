@@ -325,14 +325,38 @@ def inject_global_css():
            st.markdown dan st.button dirender sebagai elemen sejajar).
            Maka dipakai selector "+" (adjacent sibling) untuk menata
            tombol yang baru saja didahului oleh marker tersebut. */
+
+        /* Kecilkan gap antar kolom KHUSUS di dalam wrapper menu navbar,
+           supaya 3 tombol menu tidak terlihat renggang seperti versi
+           sebelumnya (st.columns bawaan punya gap besar secara default). */
+        div.navbar-menu-wrapper [data-testid="stHorizontalBlock"] {{
+            gap: 0.3rem !important;
+        }}
+        div.navbar-menu-wrapper [data-testid="stColumn"] {{
+            width: fit-content !important;
+            flex: 0 0 auto !important;
+            min-width: 0 !important;
+            padding: 0 !important;
+        }}
+
         div.navbtn-active + div[data-testid="stButton"] button,
-        div.navbtn-inactive + div[data-testid="stButton"] button {{
+        div.navbtn-inactive + div[data-testid="stButton"] button,
+        div.navbtn-active + div[data-testid="stButton"] button:focus,
+        div.navbtn-inactive + div[data-testid="stButton"] button:focus,
+        div.navbtn-active + div[data-testid="stButton"] button:active,
+        div.navbtn-inactive + div[data-testid="stButton"] button:active,
+        div.navbtn-active + div[data-testid="stButton"] button:focus:not(:active),
+        div.navbtn-inactive + div[data-testid="stButton"] button:focus:not(:active) {{
             background-color: transparent !important;
+            background: transparent !important;
             border: none !important;
+            border-color: transparent !important;
             box-shadow: none !important;
-            padding: 0.3rem 0 !important;
+            outline: none !important;
+            padding: 0.3rem 0.6rem !important;
             font-weight: 600;
             font-size: 0.95rem;
+            white-space: nowrap;
         }}
         div.navbtn-active + div[data-testid="stButton"] button {{
             color: {COLORS['terracotta']} !important;
@@ -351,6 +375,8 @@ def inject_global_css():
         div.navbtn-inactive + div[data-testid="stButton"] button:hover {{
             color: {COLORS['terracotta']} !important;
             background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
         }}
         div.navbtn-active + div[data-testid="stButton"] button:hover p,
         div.navbtn-inactive + div[data-testid="stButton"] button:hover p {{
@@ -418,7 +444,7 @@ def render_navbar(active_page: str = "Home"):
     if active_page == "Tentang":
         active_page = "Tentang ML"
 
-    col_brand, col_m1, col_m2, col_m3 = st.columns([3, 1, 1, 1.3])
+    col_brand, col_menu = st.columns([3, 2.2])
 
     with col_brand:
         st.markdown(
@@ -427,19 +453,18 @@ def render_navbar(active_page: str = "Home"):
         )
 
     switched_to = None
-    for col, page_name in zip([col_m1, col_m2, col_m3], pages):
-        with col:
-            is_active = (page_name == active_page)
-            # Catatan: type="tertiary" TIDAK dipakai karena belum pasti
-            # tersedia di Streamlit 1.36.0 yang dipin di requirements.txt
-            # (parameter ini relatif baru). Pakai "secondary" yang sudah
-            # lama didukung, lalu CSS (.navbar-link-btn) yang menghapus
-            # tampilan kotak/border supaya terlihat seperti link teks.
-            btn_class_marker = "navbtn-active" if is_active else "navbtn-inactive"
-            st.markdown(f'<div class="{btn_class_marker}">', unsafe_allow_html=True)
-            if st.button(page_name, key=f"navbtn_{page_name}", type="secondary"):
-                switched_to = page_name
-            st.markdown('</div>', unsafe_allow_html=True)
+    with col_menu:
+        st.markdown('<div class="navbar-menu-wrapper">', unsafe_allow_html=True)
+        btn_cols = st.columns(len(pages))
+        for col, page_name in zip(btn_cols, pages):
+            with col:
+                is_active = (page_name == active_page)
+                btn_class_marker = "navbtn-active" if is_active else "navbtn-inactive"
+                st.markdown(f'<div class="{btn_class_marker}">', unsafe_allow_html=True)
+                if st.button(page_name, key=f"navbtn_{page_name}", type="secondary"):
+                    switched_to = page_name
+                st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<hr class="thin-divider" style="margin-top:0.5rem;">', unsafe_allow_html=True)
 
