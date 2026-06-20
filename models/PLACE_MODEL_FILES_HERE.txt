@@ -1,0 +1,14 @@
+Letakkan file berikut di folder ini sebelum deploy:
+
+1. model_final.h5          (hasil export dari notebook training)
+2. class_mapping.json      (hasil export dari notebook training)
+3. model_config.json       (opsional, untuk menampilkan metrik di halaman "Tentang")
+
+Ketiga file ini dihasilkan otomatis oleh notebook training di Google
+Colab, tersimpan di:
+  /content/drive/MyDrive/Skripsi_Fasya/output/models/model_final.h5
+  /content/drive/MyDrive/Skripsi_Fasya/output/class_mapping.json
+  /content/drive/MyDrive/Skripsi_Fasya/output/model_config.json
+
+Download ketiganya dari Google Drive, lalu salin ke folder ini sebelum
+push ke GitHub.
