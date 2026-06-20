@@ -144,10 +144,10 @@ if uploaded_file is not None:
         st.stop()
 
     with col_preview:
-        st.image(image, caption="Pratinjau gambar yang diunggah", use_container_width=True)
+        st.image(image, caption="Pratinjau gambar yang diunggah", width="stretch")
 
     with col_upload:
-        classify_clicked = st.button("🔍 Klasifikasikan Gambar", use_container_width=True)
+        classify_clicked = st.button("🔍 Klasifikasikan Gambar", width="stretch")
 
     if classify_clicked:
         with st.spinner("Menganalisis pola visual kostum..."):
@@ -219,10 +219,10 @@ if "last_result" in st.session_state:
 
     col_a, col_b = st.columns([1, 1])
     with col_a:
-        if st.button("📖 Lihat Detail Lengkap di Katalog", use_container_width=True):
+        if st.button("📖 Lihat Detail Lengkap di Katalog", width="stretch"):
             st.session_state["catalog_focus"] = pred_key
             st.switch_page("pages/1_Katalog.py")
     with col_b:
-        if st.button("🔄 Klasifikasikan Gambar Lain", use_container_width=True):
+        if st.button("🔄 Klasifikasikan Gambar Lain", width="stretch"):
             del st.session_state["last_result"]
             st.rerun()

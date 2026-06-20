@@ -26,7 +26,7 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
     st.markdown("---")
-    if st.button("⬅️ Kembali ke Beranda", use_container_width=True):
+    if st.button("⬅️ Kembali ke Beranda", width="stretch"):
         st.switch_page("app.py")
 
 

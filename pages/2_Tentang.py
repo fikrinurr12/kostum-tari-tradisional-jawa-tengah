@@ -23,7 +23,7 @@ styling.inject_global_css()
 with st.sidebar:
     st.markdown("### 🩰 Tari Jawa Tengah")
     st.markdown("---")
-    if st.button("⬅️ Kembali ke Beranda", use_container_width=True):
+    if st.button("⬅️ Kembali ke Beranda", width="stretch"):
         st.switch_page("app.py")
 
 
