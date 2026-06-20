@@ -320,67 +320,63 @@ def inject_global_css():
         }}
 
         /* ── Navbar link button (st.button disulap jadi link teks) ── */
-        /* Marker div (navbtn-active/inactive) berada SEBELUM elemen
-           tombol Streamlit (sibling, bukan parent-child, karena
-           st.markdown dan st.button dirender sebagai elemen sejajar).
-           Maka dipakai selector "+" (adjacent sibling) untuk menata
-           tombol yang baru saja didahului oleh marker tersebut. */
-
         /* Kecilkan gap antar kolom KHUSUS di dalam wrapper menu navbar,
-           supaya 3 tombol menu tidak terlihat renggang seperti versi
-           sebelumnya (st.columns bawaan punya gap besar secara default). */
+           supaya 3 tombol menu tidak terlihat renggang. */
         div.navbar-menu-wrapper [data-testid="stHorizontalBlock"] {{
-            gap: 0.3rem !important;
+            gap: 0.2rem !important;
         }}
         div.navbar-menu-wrapper [data-testid="stColumn"] {{
             width: fit-content !important;
             flex: 0 0 auto !important;
             min-width: 0 !important;
-            padding: 0 !important;
+            padding: 0 0.4rem !important;
         }}
 
-        div.navbtn-active + div[data-testid="stButton"] button,
-        div.navbtn-inactive + div[data-testid="stButton"] button,
-        div.navbtn-active + div[data-testid="stButton"] button:focus,
-        div.navbtn-inactive + div[data-testid="stButton"] button:focus,
-        div.navbtn-active + div[data-testid="stButton"] button:active,
-        div.navbtn-inactive + div[data-testid="stButton"] button:active,
-        div.navbtn-active + div[data-testid="stButton"] button:focus:not(:active),
-        div.navbtn-inactive + div[data-testid="stButton"] button:focus:not(:active) {{
+        /* Reset border/box SEMUA tombol di dalam wrapper navbar secara
+           langsung (tidak bergantung pada sibling selector yang rapuh
+           terhadap perubahan struktur DOM Streamlit antar versi). */
+        div.navbar-menu-wrapper button {{
             background-color: transparent !important;
             background: transparent !important;
             border: none !important;
+            border-width: 0px !important;
             border-color: transparent !important;
             box-shadow: none !important;
             outline: none !important;
-            padding: 0.3rem 0.6rem !important;
+            padding: 0.3rem 0.5rem !important;
             font-weight: 600;
             font-size: 0.95rem;
             white-space: nowrap;
         }}
-        div.navbtn-active + div[data-testid="stButton"] button {{
+        div.navbar-menu-wrapper button:hover,
+        div.navbar-menu-wrapper button:focus,
+        div.navbar-menu-wrapper button:active,
+        div.navbar-menu-wrapper button:focus:not(:active) {{
+            background-color: transparent !important;
+            background: transparent !important;
+            border: none !important;
+            border-width: 0px !important;
+            box-shadow: none !important;
+            outline: none !important;
             color: {COLORS['terracotta']} !important;
         }}
+        div.navbar-menu-wrapper button:hover p,
+        div.navbar-menu-wrapper button:focus p {{
+            color: {COLORS['terracotta']} !important;
+        }}
+
+        /* Warna aktif vs inactive -- tetap lewat marker sibling div,
+           karena ini hanya untuk WARNA (bukan border/box yang sudah
+           direset langsung di atas), jadi lebih toleran kalau sibling
+           selector ini tidak match sempurna. */
+        div.navbtn-active + div[data-testid="stButton"] button,
         div.navbtn-active + div[data-testid="stButton"] button p {{
             color: {COLORS['terracotta']} !important;
             font-weight: 700;
         }}
-        div.navbtn-inactive + div[data-testid="stButton"] button {{
-            color: {COLORS['ink_soft']} !important;
-        }}
+        div.navbtn-inactive + div[data-testid="stButton"] button,
         div.navbtn-inactive + div[data-testid="stButton"] button p {{
             color: {COLORS['ink_soft']} !important;
-        }}
-        div.navbtn-active + div[data-testid="stButton"] button:hover,
-        div.navbtn-inactive + div[data-testid="stButton"] button:hover {{
-            color: {COLORS['terracotta']} !important;
-            background-color: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-        }}
-        div.navbtn-active + div[data-testid="stButton"] button:hover p,
-        div.navbtn-inactive + div[data-testid="stButton"] button:hover p {{
-            color: {COLORS['terracotta']} !important;
         }}
 
         /* ── Chart container (Confusion Matrix / Accuracy) ──────── */
