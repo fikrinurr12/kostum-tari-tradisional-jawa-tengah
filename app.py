@@ -51,55 +51,43 @@ styling.render_navbar(active_page="Home")
 
 
 # ─────────────────────────────────────────────────────────────────
-# HERO / BERANDA
+# HERO / BERANDA -- judul terpusat di atas, kartu upload di tengah,
+# foto dekoratif di belakang (gaya referensi landing page baru)
 # ─────────────────────────────────────────────────────────────────
-col_hero_text, col_hero_visual = st.columns([1.2, 1], gap="large")
+st.markdown('<div class="center-text">', unsafe_allow_html=True)
+st.markdown(
+    '<h1 style="margin-bottom:1rem;">Kenali Warisan Budaya<br>Lewat Satu Foto.</h1>',
+    unsafe_allow_html=True,
+)
+st.markdown(
+    '<p class="lead-text" style="margin:0 auto; text-align:center;">'
+    "Sistem cerdas berbasis Machine Learning untuk mengidentifikasi "
+    "kostum tari tradisional Jawa Tengah secara instan.</p>",
+    unsafe_allow_html=True,
+)
+st.markdown('</div>', unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 
-with col_hero_text:
-    st.markdown(
-        '<h1 style="margin-bottom:1rem;">Kenali Warisan<br>Budaya Lewat<br>Satu Foto.</h1>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<p class="lead-text">Sistem cerdas berbasis Machine Learning untuk '
-        "mengidentifikasi kostum tari tradisional Jawa Tengah secara "
-        "instan. Unggah foto atau ambil langsung dari kamera, dan "
-        "biarkan model CNN MobileNetV2 mengenalinya.</p>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("<br>", unsafe_allow_html=True)
+# Foto dekoratif (kalau ada) ditampilkan sebagai backdrop di belakang
+# kartu upload, mengikuti komposisi referensi.
+hero_photo_path = None
+for k in config.CLASS_ORDER:
+    candidate = config.get_catalog_image_path(k)
+    if candidate:
+        hero_photo_path = candidate
+        break
+
+col_hero_left, col_hero_center, col_hero_right = st.columns([0.6, 1.6, 0.6])
+with col_hero_center:
+    if hero_photo_path:
+        st.image(hero_photo_path)
     badges = "".join(
         f'<span class="badge">{config.DANCE_CATALOG[k]["nama_tampilan"]}</span>'
         for k in config.CLASS_ORDER
     )
-    st.markdown(badges, unsafe_allow_html=True)
+    st.markdown(f'<div class="center-text">{badges}</div>', unsafe_allow_html=True)
 
-with col_hero_visual:
-    hero_photo_found = False
-    for k in config.CLASS_ORDER:
-        photo_path = config.get_catalog_image_path(k)
-        if photo_path:
-            st.image(photo_path, use_container_width=True)
-            hero_photo_found = True
-            break
-
-    if not hero_photo_found:
-        st.markdown(
-            f"""
-            <div class="card" style="text-align:center; padding:3rem 1.5rem; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-                <div style="font-size:3.5rem; margin-bottom:0.8rem;">🪭</div>
-                <div class="eyebrow">Lima Kelas Kostum</div>
-                <div style="font-family:{styling.FONT_DISPLAY}; font-size:1.5rem; font-weight:700; line-height:1.4;">
-                    Bedhaya · Dolalak<br>Gambyong · Golek · Srimpi
-                </div>
-                <p class="muted-text" style="margin-top:0.8rem;">
-                    Letakkan foto di assets/catalog/&lt;nama_kelas&gt;.jpg untuk menampilkan visual di sini
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
+st.markdown("<br>", unsafe_allow_html=True)
 st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
 
 
@@ -129,93 +117,77 @@ if model_error:
 
 
 # ─────────────────────────────────────────────────────────────────
-# BAGIAN UPLOAD & KLASIFIKASI
+# BAGIAN UPLOAD & KLASIFIKASI -- dibungkus kartu terpusat
 # ─────────────────────────────────────────────────────────────────
-styling.eyebrow("Coba Sekarang")
-st.markdown("## Unggah atau Foto Kostum Tari")
-st.markdown(
-    '<p class="lead-text">Gunakan foto yang jelas, dengan kostum tari '
-    "terlihat penuh dan tidak tertutup objek lain, untuk hasil terbaik. "
-    "Jika dibuka lewat HP, kamu juga bisa langsung memotret dari tab "
-    '"Ambil Foto".</p>',
-    unsafe_allow_html=True,
-)
+col_upload_l, col_upload_center, col_upload_r = st.columns([0.3, 1.4, 0.3])
 
-tab_upload, tab_camera = st.tabs(["📁 Unggah Gambar", "📷 Ambil Foto"])
+with col_upload_center:
+    tab_upload, tab_camera = st.tabs(["📁 Unggah Gambar", "📷 Ambil Foto"])
 
-new_image = None
-new_image_name = None
+    new_image = None
+    new_image_name = None
 
-with tab_upload:
-    col_upload, col_preview_upload = st.columns([1, 1], gap="large")
+    with tab_upload:
+        uploaded_file = st.file_uploader(
+            "Pilih gambar (JPG, JPEG, atau PNG)",
+            type=["jpg", "jpeg", "png"],
+            label_visibility="collapsed",
+            key="file_uploader_widget",
+        )
 
-    uploaded_file = col_upload.file_uploader(
-        "Pilih gambar (JPG, JPEG, atau PNG)",
-        type=["jpg", "jpeg", "png"],
-        label_visibility="collapsed",
-        key="file_uploader_widget",
-    )
+        if uploaded_file is not None:
+            try:
+                preview_img = Image.open(uploaded_file)
+            except Exception:
+                st.error("⚠️ Gambar tidak bisa dibuka. Coba unggah file gambar lain.")
+                preview_img = None
 
-    if uploaded_file is not None:
-        try:
-            preview_img = Image.open(uploaded_file)
-        except Exception:
-            st.error("⚠️ Gambar tidak bisa dibuka. Coba unggah file gambar lain.")
-            preview_img = None
-
-        if preview_img is not None:
-            with col_preview_upload:
+            if preview_img is not None:
                 st.image(preview_img, caption="Pratinjau gambar yang diunggah")
-            new_image = preview_img
-            new_image_name = uploaded_file.name
-            classify_key = "classify_upload"
+                new_image = preview_img
+                new_image_name = uploaded_file.name
 
-with tab_camera:
-    st.markdown(
-        '<p class="muted-text">Izinkan akses kamera saat browser meminta, '
-        "lalu arahkan kamera ke kostum tari dan tekan tombol ambil foto."
-        "</p>",
-        unsafe_allow_html=True,
-    )
-    col_camera, col_preview_camera = st.columns([1, 1], gap="large")
-
-    with col_camera:
+    with tab_camera:
+        st.markdown(
+            '<p class="muted-text" style="text-align:center;">Izinkan akses kamera '
+            "saat browser meminta, lalu arahkan kamera ke kostum tari dan tekan "
+            "tombol ambil foto.</p>",
+            unsafe_allow_html=True,
+        )
         camera_file = st.camera_input(
             "Ambil foto kostum tari",
             label_visibility="collapsed",
             key="camera_input_widget",
         )
 
-    if camera_file is not None:
-        try:
-            camera_img = Image.open(camera_file)
-        except Exception:
-            st.error("⚠️ Foto tidak bisa dibuka. Coba ambil ulang.")
-            camera_img = None
+        if camera_file is not None:
+            try:
+                camera_img = Image.open(camera_file)
+            except Exception:
+                st.error("⚠️ Foto tidak bisa dibuka. Coba ambil ulang.")
+                camera_img = None
 
-        if camera_img is not None:
-            with col_preview_camera:
+            if camera_img is not None:
                 st.image(camera_img, caption="Pratinjau foto yang diambil")
-            new_image = camera_img
-            new_image_name = "foto_kamera.jpg"
-            classify_key = "classify_camera"
+                new_image = camera_img
+                new_image_name = "foto_kamera.jpg"
 
-# Tombol klasifikasi tunggal, muncul di bawah tab manapun yang aktif
-# dan punya gambar siap diproses.
-if new_image is not None:
-    st.markdown("")  # spasi kecil
-    classify_clicked = st.button(
-        "🔍 Klasifikasikan Gambar", use_container_width=True, type="primary"
-    )
+    # Tombol klasifikasi tunggal, muncul di bawah tab manapun yang aktif
+    # dan punya gambar siap diproses.
+    if new_image is not None:
+        st.markdown("")  # spasi kecil
+        classify_clicked = st.button(
+            "🔍 Klasifikasikan Gambar", use_container_width=True, type="primary"
+        )
 
-    if classify_clicked:
-        with st.spinner("Menganalisis pola visual kostum..."):
-            time.sleep(0.4)  # jeda kecil agar transisi terasa, bukan instan
-            result = model_loader.predict(model, mapping, new_image)
+        if classify_clicked:
+            with st.spinner("Menganalisis pola visual kostum..."):
+                time.sleep(0.4)  # jeda kecil agar transisi terasa, bukan instan
+                result = model_loader.predict(model, mapping, new_image)
 
-        st.session_state["last_result"] = result
-        st.session_state["last_image_caption"] = new_image_name
-        st.rerun()
+            st.session_state["last_result"] = result
+            st.session_state["last_image_caption"] = new_image_name
+            st.rerun()
 
 # ─────────────────────────────────────────────────────────────────
 # TAMPILKAN HASIL (jika ada hasil tersimpan di session_state)

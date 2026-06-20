@@ -9,6 +9,8 @@ flowchart sederhana (kotak-kotak terhubung secara vertikal).
 import json
 import os
 
+import matplotlib.pyplot as plt
+import numpy as np
 import streamlit as st
 
 import config
@@ -22,6 +24,64 @@ st.set_page_config(
 )
 
 styling.inject_global_css()
+
+
+def render_confusion_matrix_chart(cm, labels):
+    """Heatmap confusion matrix bergaya tema terracotta aplikasi."""
+    fig, ax = plt.subplots(figsize=(5, 4.2))
+    cmap = plt.cm.Oranges
+    im = ax.imshow(cm, cmap=cmap)
+
+    short_labels = [lbl.replace("Tari_", "").replace("Tari ", "") for lbl in labels]
+    ax.set_xticks(range(len(short_labels)))
+    ax.set_yticks(range(len(short_labels)))
+    ax.set_xticklabels(short_labels, rotation=35, ha="right", fontsize=8)
+    ax.set_yticklabels(short_labels, fontsize=8)
+    ax.set_xlabel("Prediksi", fontsize=9, color=styling.COLORS["ink_soft"])
+    ax.set_ylabel("Label Asli", fontsize=9, color=styling.COLORS["ink_soft"])
+
+    cm_arr = np.array(cm)
+    max_val = cm_arr.max() if cm_arr.size else 1
+    for i in range(cm_arr.shape[0]):
+        for j in range(cm_arr.shape[1]):
+            val = cm_arr[i, j]
+            text_color = "white" if val > max_val * 0.55 else styling.COLORS["ink"]
+            ax.text(j, i, str(val), ha="center", va="center", fontsize=8, color=text_color)
+
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    fig.tight_layout()
+    return fig
+
+
+def render_accuracy_chart(acc_history, val_acc_history=None):
+    """Line/area chart accuracy training bergaya tema terracotta aplikasi."""
+    fig, ax = plt.subplots(figsize=(5.5, 4.2))
+    epochs = range(1, len(acc_history) + 1)
+
+    ax.fill_between(epochs, [a * 100 for a in acc_history],
+                     color=styling.COLORS["terracotta"], alpha=0.25)
+    ax.plot(epochs, [a * 100 for a in acc_history],
+            color=styling.COLORS["terracotta"], linewidth=2, label="Training")
+
+    if val_acc_history:
+        ax.plot(epochs, [a * 100 for a in val_acc_history],
+                color=styling.COLORS["ink_soft"], linewidth=1.6,
+                linestyle="--", label="Validasi")
+        ax.legend(fontsize=8, frameon=False)
+
+    ax.set_xlabel("Epoch", fontsize=9, color=styling.COLORS["ink_soft"])
+    ax.set_ylabel("Akurasi (%)", fontsize=9, color=styling.COLORS["ink_soft"])
+    ax.set_ylim(0, 100)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(labelsize=8)
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+    fig.tight_layout()
+    return fig
 
 with st.sidebar:
     st.markdown("### Tari Jateng")
@@ -174,6 +234,53 @@ if eval_data and eval_data.get("per_class_accuracy"):
             """,
             unsafe_allow_html=True,
         )
+
+    st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
+
+
+# ─────────────────────────────────────────────────────────────────
+# CHART VISUAL: Confusion Matrix & Accuracy Training
+# ─────────────────────────────────────────────────────────────────
+has_cm = eval_data and eval_data.get("confusion_matrix") and eval_data.get("confusion_matrix_labels")
+has_history = eval_data and eval_data.get("accuracy_history")
+
+if has_cm or has_history:
+    styling.eyebrow("Visualisasi Hasil")
+    st.markdown("## Confusion Matrix & Kurva Akurasi")
+
+    chart_col1, chart_col2 = st.columns(2, gap="medium")
+
+    with chart_col1:
+        st.markdown('<div class="chart-box">', unsafe_allow_html=True)
+        st.markdown('<div class="chart-title">Confusion Matrix</div>', unsafe_allow_html=True)
+        if has_cm:
+            fig_cm = render_confusion_matrix_chart(
+                eval_data["confusion_matrix"], eval_data["confusion_matrix_labels"]
+            )
+            st.pyplot(fig_cm)
+        else:
+            st.markdown(
+                '<p class="muted-text">Data confusion matrix belum tersedia '
+                "di model_config.json.</p>",
+                unsafe_allow_html=True,
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with chart_col2:
+        st.markdown('<div class="chart-box">', unsafe_allow_html=True)
+        st.markdown('<div class="chart-title">Kurva Akurasi Training</div>', unsafe_allow_html=True)
+        if has_history:
+            fig_acc = render_accuracy_chart(
+                eval_data["accuracy_history"], eval_data.get("val_accuracy_history")
+            )
+            st.pyplot(fig_acc)
+        else:
+            st.markdown(
+                '<p class="muted-text">Data riwayat akurasi training belum '
+                "tersedia di model_config.json.</p>",
+                unsafe_allow_html=True,
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
 

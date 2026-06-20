@@ -103,7 +103,8 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────────────────────────
-# GRID KATALOG -- gaya majalah, 3 kolom, foto besar di atas
+# GRID KATALOG -- gaya majalah, ASIMETRIS: 2 kartu besar di baris
+# pertama, sisanya 3 kartu lebih kecil di baris kedua (sesuai acuan)
 # ─────────────────────────────────────────────────────────────────
 PLACEHOLDER_ICONS = {
     "Tari_Bedhaya": "🕊️",
@@ -113,46 +114,61 @@ PLACEHOLDER_ICONS = {
     "Tari_Srimpi": "🍃",
 }
 
-cols_per_row = 3
-rows = [display_keys[i:i + cols_per_row] for i in range(0, len(display_keys), cols_per_row)]
 
-for row in rows:
-    cols = st.columns(cols_per_row, gap="medium")
-    for col, key in zip(cols, row):
-        info = config.DANCE_CATALOG[key]
-        accent = info["warna_aksen"]
-        photo_path = config.get_catalog_image_path(key)
+def render_catalog_card(key):
+    info = config.DANCE_CATALOG[key]
+    accent = info["warna_aksen"]
+    photo_path = config.get_catalog_image_path(key)
 
+    st.markdown('<div class="catalog-card">', unsafe_allow_html=True)
+
+    if photo_path:
+        st.markdown('<div class="catalog-card-image">', unsafe_allow_html=True)
+        st.image(photo_path)
+        st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        icon = PLACEHOLDER_ICONS.get(key, "🪭")
+        st.markdown(
+            f'<div class="catalog-card-image" style="color:{accent};">{icon}</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        f"""
+        <div class="catalog-card-title">{info['nama_tampilan']}</div>
+        <p class="catalog-card-desc">{info['ringkasan']}</p>
+        <span class="badge" style="margin-top:0.5rem;">{info['asal']}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    with st.expander(f"Lihat detail {info['nama_tampilan']}"):
+        st.markdown(info["deskripsi"])
+        st.markdown("**Ciri khas kostum:**")
+        for ciri in info["ciri_kostum"]:
+            st.markdown(f"- {ciri}")
+        st.markdown(f"*💡 {info['fakta_singkat']}*")
+
+
+# Baris pertama: 2 kartu besar (jika tersedia minimal 2 item)
+first_row = display_keys[:2]
+remaining = display_keys[2:]
+
+if first_row:
+    cols = st.columns(len(first_row) if len(first_row) < 2 else 2, gap="medium")
+    for col, key in zip(cols, first_row):
         with col:
-            st.markdown('<div class="catalog-card">', unsafe_allow_html=True)
+            render_catalog_card(key)
 
-            if photo_path:
-                st.markdown('<div class="catalog-card-image">', unsafe_allow_html=True)
-                st.image(photo_path, use_container_width=True)
-                st.markdown('</div>', unsafe_allow_html=True)
-            else:
-                icon = PLACEHOLDER_ICONS.get(key, "🪭")
-                st.markdown(
-                    f'<div class="catalog-card-image" style="color:{accent};">{icon}</div>',
-                    unsafe_allow_html=True,
-                )
-
-            st.markdown(
-                f"""
-                <div class="catalog-card-title">{info['nama_tampilan']}</div>
-                <p class="catalog-card-desc">{info['ringkasan']}</p>
-                <span class="badge" style="margin-top:0.5rem;">{info['asal']}</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            with st.expander(f"Lihat detail {info['nama_tampilan']}"):
-                st.markdown(info["deskripsi"])
-                st.markdown("**Ciri khas kostum:**")
-                for ciri in info["ciri_kostum"]:
-                    st.markdown(f"- {ciri}")
-                st.markdown(f"*💡 {info['fakta_singkat']}*")
+# Baris berikutnya: kartu lebih kecil, 3 per baris
+if remaining:
+    rows = [remaining[i:i + 3] for i in range(0, len(remaining), 3)]
+    for row in rows:
+        cols = st.columns(3, gap="medium")
+        for col, key in zip(cols, row):
+            with col:
+                render_catalog_card(key)
 
 st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
 st.caption(

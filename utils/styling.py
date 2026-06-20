@@ -59,11 +59,11 @@ def inject_global_css():
             align-items: center;
             padding: 0.9rem 0 0.9rem 0;
             border-bottom: 1px solid {COLORS['border']};
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
         }}
         .navbar-brand {{
             font-family: {FONT_DISPLAY};
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             font-weight: 700;
             color: {COLORS['ink']};
             letter-spacing: -0.01em;
@@ -228,15 +228,15 @@ def inject_global_css():
         /* ── Kartu katalog gaya majalah (foto besar + teks bawah) ── */
         .catalog-card {{
             background-color: white;
-            border-radius: 14px;
+            border-radius: 10px;
             overflow: hidden;
-            margin-bottom: 1.6rem;
+            margin-bottom: 1.8rem;
         }}
         .catalog-card-image {{
             width: 100%;
             aspect-ratio: 4/3;
             background-color: {COLORS['paper_alt']};
-            border-radius: 14px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -298,17 +298,42 @@ def inject_global_css():
         footer {{visibility: hidden;}}
         header[data-testid="stHeader"] {{background-color: transparent;}}
 
-        /* ── Upload box & camera kustom ────────────────────────── */
+        /* ── Upload box & camera kustom (gaya kartu terpusat) ──── */
         [data-testid="stFileUploader"], [data-testid="stCameraInput"] {{
             background-color: {COLORS['paper_alt']};
             border: 1.5px dashed {COLORS['border']};
-            border-radius: 12px;
-            padding: 0.7rem;
+            border-radius: 14px;
+            padding: 1rem;
+        }}
+        [data-testid="stFileUploaderDropzone"] {{
+            background-color: transparent;
+        }}
+
+        /* ── Kartu pembungkus upload terpusat (signature hero) ─── */
+        .upload-card-wrapper {{
+            background-color: {COLORS['paper_alt']};
+            border: 1.5px dashed {COLORS['border']};
+            border-radius: 16px;
+            padding: 1.6rem 1.8rem;
+            max-width: 420px;
+        }}
+        .upload-card-icon {{
+            text-align: center;
+            font-size: 2.2rem;
+            color: {COLORS['terracotta']};
+            margin-bottom: 0.4rem;
+        }}
+        .upload-card-hint {{
+            text-align: center;
+            color: {COLORS['ink_soft']};
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
         }}
 
         /* ── Tabs kustom ────────────────────────────────────────── */
         .stTabs [data-baseweb="tab-list"] {{
             gap: 1.5rem;
+            justify-content: center;
         }}
         .stTabs [data-baseweb="tab"] {{
             font-weight: 600;
@@ -316,6 +341,20 @@ def inject_global_css():
         }}
         .stTabs [aria-selected="true"] {{
             color: {COLORS['terracotta']} !important;
+        }}
+
+        /* ── Chart container (Confusion Matrix / Accuracy) ──────── */
+        .chart-box {{
+            background-color: white;
+            border: 1px solid {COLORS['border']};
+            border-radius: 12px;
+            padding: 1.3rem 1.4rem 0.8rem 1.4rem;
+            margin-bottom: 1rem;
+        }}
+        .chart-box .chart-title {{
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 0.6rem;
         }}
 
         /* ── Footer kustom ──────────────────────────────────────── */
@@ -346,11 +385,12 @@ def render_navbar(active_page: str = "Home"):
     multipage app, menu di sini bersifat visual/penanda halaman aktif --
     navigasi sungguhan tetap lewat sidebar bawaan Streamlit atau tombol.
     """
-    pages = ["Home", "Katalog", "Tentang"]
+    pages = ["Home", "Katalog", "Tentang ML"]
     menu_html = ""
     for p in pages:
-        weight = "700" if p == active_page else "500"
-        color = "#B5663F" if p == active_page else "#6B6B6B"
+        is_active = (p == active_page) or (p == "Tentang ML" and active_page == "Tentang")
+        weight = "700" if is_active else "500"
+        color = "#B5663F" if is_active else "#6B6B6B"
         menu_html += f'<span style="margin-left:1.8rem; font-size:0.92rem; font-weight:{weight}; color:{color};">{p}</span>'
 
     st.markdown(

@@ -2,23 +2,32 @@
 # Versi dipin secara spesifik untuk menghindari konflik dependency saat
 # deploy di Streamlit Community Cloud.
 #
-# CATATAN PENTING:
+# CATATAN PENTING (riwayat perbaikan):
+# - tensorflow-cpu diubah dari 2.15.0 -> 2.20.0 karena notebook training
+#   di Google Colab ternyata berjalan di TensorFlow 2.20.0 / Keras 3.13.2
+#   (Colab meng-override pin '==2.15.0' di cell instalasi dengan versi
+#   preinstalled mereka yang lebih baru). Model .h5 tersimpan dalam
+#   format serialisasi Keras 3.x, sehingga environment Streamlit HARUS
+#   memuat versi TensorFlow/Keras yang sezaman.
+#   -> SELALU cek versi training sebenarnya dengan menjalankan
+#      `import tensorflow as tf; print(tf.__version__)` di notebook
+#      SEBELUM menyamakan versi ini, jangan asumsikan dari kode instalasi.
+# - numpy tidak lagi dipin ketat ke versi tertentu, cukup >=1.26.0
+#   (disyaratkan langsung oleh tensorflow-cpu 2.20.0).
 # - Memakai `tensorflow-cpu` (bukan `tensorflow` penuh) karena Streamlit
-#   Cloud hanya menyediakan CPU, sehingga versi CPU-only ini jauh lebih
-#   ringan untuk diinstall dan tidak mencoba mencari driver GPU/CUDA
-#   yang tidak ada di environment tersebut.
-# - Versi TensorFlow 2.15.x dipilih agar sama dengan versi yang dipakai
-#   saat training di notebook (Google Colab), supaya format model
-#   (.h5/.keras) terbaca tanpa masalah kompatibilitas versi.
-# - Wajib pin Python ke 3.11 lewat runtime.txt (lihat file tersebut),
-#   karena TensorFlow 2.15 belum tersedia untuk Python 3.12/3.13.
-
-# streamlit==1.36.0
-# tensorflow-cpu==2.15.0
-# numpy==1.26.4
-# pillow==10.3.0
+#   Cloud hanya menyediakan CPU.
+#
+# CATATAN PENTING soal Python version:
+# - File `runtime.txt` TIDAK reliable dibaca otomatis oleh Streamlit
+#   Community Cloud (per pertengahan 2026, banyak laporan platform
+#   mengabaikannya dan memaksa Python versi terbaru/3.13+).
+# - WAJIB set Python version secara manual lewat "Advanced settings"
+#   saat membuat/redeploy app di share.streamlit.io -> pilih Python 3.11.
+# - Python tidak bisa diubah setelah app di-deploy; jika perlu mengganti,
+#   app harus di-delete lalu dibuat ulang dengan setting yang benar.
 
 streamlit==1.36.0
 tensorflow-cpu==2.20.0
 numpy>=1.26.0
 pillow==10.3.0
+matplotlib>=3.8.0
