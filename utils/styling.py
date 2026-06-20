@@ -406,14 +406,14 @@ def inject_global_css():
             /* Baris terluar (brand + grup menu) juga dipaksa tetap
                horizontal di mobile, supaya brand tidak terpisah jauh
                ke atas sendirian seperti pada layout default Streamlit.
-               st.container(key="navbar_outer_container") menghasilkan
-               class "st-key-navbar_outer_container" secara otomatis. */
-            div[class*="st-key-navbar_outer_container"] [data-testid="stHorizontalBlock"] {{
+               Ditarget lewat sibling selector dari marker div, karena
+               st.container(key=...) TIDAK didukung di Streamlit 1.36.0. */
+            div.navbar-outer-marker + [data-testid="stHorizontalBlock"] {{
                 flex-direction: row !important;
                 flex-wrap: nowrap !important;
                 align-items: center !important;
             }}
-            div[class*="st-key-navbar_outer_container"] [data-testid="stColumn"] {{
+            div.navbar-outer-marker + [data-testid="stHorizontalBlock"] [data-testid="stColumn"] {{
                 width: auto !important;
                 min-width: 0 !important;
             }}
@@ -483,29 +483,34 @@ def render_navbar(active_page: str = "Home"):
     if active_page == "Tentang":
         active_page = "Tentang ML"
 
-    navbar_container = st.container(key="navbar_outer_container")
-    with navbar_container:
-        col_brand, col_menu = st.columns([3, 2.2])
+    # Catatan: TIDAK memakai st.container(key=...) karena parameter
+    # 'key' pada st.container() belum tersedia di Streamlit 1.36.0
+    # yang dipin di requirements.txt (fitur ini baru di versi lebih
+    # baru). Dipakai marker div sederhana + sibling selector CSS
+    # sebagai gantinya -- konsisten dengan pendekatan yang sudah
+    # terbukti aman di bagian lain navbar ini.
+    st.markdown('<div class="navbar-outer-marker"></div>', unsafe_allow_html=True)
+    col_brand, col_menu = st.columns([3, 2.2])
 
-        with col_brand:
-            st.markdown(
-                '<div class="navbar-brand" style="padding-top:0.3rem;">Tari<span>Jateng</span></div>',
-                unsafe_allow_html=True,
-            )
+    with col_brand:
+        st.markdown(
+            '<div class="navbar-brand" style="padding-top:0.3rem;">Tari<span>Jateng</span></div>',
+            unsafe_allow_html=True,
+        )
 
-        switched_to = None
-        with col_menu:
-            st.markdown('<div class="navbar-menu-wrapper">', unsafe_allow_html=True)
-            btn_cols = st.columns(len(pages))
-            for col, page_name in zip(btn_cols, pages):
-                with col:
-                    is_active = (page_name == active_page)
-                    btn_class_marker = "navbtn-active" if is_active else "navbtn-inactive"
-                    st.markdown(f'<div class="{btn_class_marker}">', unsafe_allow_html=True)
-                    if st.button(page_name, key=f"navbtn_{page_name}", type="secondary"):
-                        switched_to = page_name
-                    st.markdown('</div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+    switched_to = None
+    with col_menu:
+        st.markdown('<div class="navbar-menu-wrapper">', unsafe_allow_html=True)
+        btn_cols = st.columns(len(pages))
+        for col, page_name in zip(btn_cols, pages):
+            with col:
+                is_active = (page_name == active_page)
+                btn_class_marker = "navbtn-active" if is_active else "navbtn-inactive"
+                st.markdown(f'<div class="{btn_class_marker}">', unsafe_allow_html=True)
+                if st.button(page_name, key=f"navbtn_{page_name}", type="secondary"):
+                    switched_to = page_name
+                st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<hr class="thin-divider" style="margin-top:0.5rem;">', unsafe_allow_html=True)
 
