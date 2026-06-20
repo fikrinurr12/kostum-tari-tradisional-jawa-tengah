@@ -121,41 +121,89 @@ if model_error:
 # BAGIAN UPLOAD & KLASIFIKASI
 # ─────────────────────────────────────────────────────────────────
 styling.eyebrow("Coba Sekarang")
-st.markdown("## Unggah Foto Kostum Tari")
+st.markdown("## Unggah atau Foto Kostum Tari")
 st.markdown(
     '<p class="muted-text">Gunakan foto yang jelas, dengan kostum tari '
-    "terlihat penuh dan tidak tertutup objek lain, untuk hasil terbaik.</p>",
+    "terlihat penuh dan tidak tertutup objek lain, untuk hasil terbaik. "
+    "Jika dibuka lewat HP, kamu juga bisa langsung memotret dari tab "
+    '"Ambil Foto".</p>',
     unsafe_allow_html=True,
 )
 
-col_upload, col_preview = st.columns([1, 1], gap="large")
+tab_upload, tab_camera = st.tabs(["📁 Unggah Gambar", "📷 Ambil Foto"])
 
-uploaded_file = col_upload.file_uploader(
-    "Pilih gambar (JPG, JPEG, atau PNG)",
-    type=["jpg", "jpeg", "png"],
-    label_visibility="collapsed",
-)
+new_image = None
+new_image_name = None
 
-if uploaded_file is not None:
-    try:
-        image = Image.open(uploaded_file)
-    except Exception:
-        st.error("⚠️ Gambar tidak bisa dibuka. Coba unggah file gambar lain.")
-        st.stop()
+with tab_upload:
+    col_upload, col_preview_upload = st.columns([1, 1], gap="large")
 
-    with col_preview:
-        st.image(image, caption="Pratinjau gambar yang diunggah")
+    uploaded_file = col_upload.file_uploader(
+        "Pilih gambar (JPG, JPEG, atau PNG)",
+        type=["jpg", "jpeg", "png"],
+        label_visibility="collapsed",
+        key="file_uploader_widget",
+    )
 
-    with col_upload:
-        classify_clicked = st.button("🔍 Klasifikasikan Gambar", use_container_width=True)
+    if uploaded_file is not None:
+        try:
+            preview_img = Image.open(uploaded_file)
+        except Exception:
+            st.error("⚠️ Gambar tidak bisa dibuka. Coba unggah file gambar lain.")
+            preview_img = None
+
+        if preview_img is not None:
+            with col_preview_upload:
+                st.image(preview_img, caption="Pratinjau gambar yang diunggah")
+            new_image = preview_img
+            new_image_name = uploaded_file.name
+            classify_key = "classify_upload"
+
+with tab_camera:
+    st.markdown(
+        '<p class="muted-text">Izinkan akses kamera saat browser meminta, '
+        "lalu arahkan kamera ke kostum tari dan tekan tombol ambil foto."
+        "</p>",
+        unsafe_allow_html=True,
+    )
+    col_camera, col_preview_camera = st.columns([1, 1], gap="large")
+
+    with col_camera:
+        camera_file = st.camera_input(
+            "Ambil foto kostum tari",
+            label_visibility="collapsed",
+            key="camera_input_widget",
+        )
+
+    if camera_file is not None:
+        try:
+            camera_img = Image.open(camera_file)
+        except Exception:
+            st.error("⚠️ Foto tidak bisa dibuka. Coba ambil ulang.")
+            camera_img = None
+
+        if camera_img is not None:
+            with col_preview_camera:
+                st.image(camera_img, caption="Pratinjau foto yang diambil")
+            new_image = camera_img
+            new_image_name = "foto_kamera.jpg"
+            classify_key = "classify_camera"
+
+# Tombol klasifikasi tunggal, muncul di bawah tab manapun yang aktif
+# dan punya gambar siap diproses.
+if new_image is not None:
+    st.markdown("")  # spasi kecil
+    classify_clicked = st.button(
+        "🔍 Klasifikasikan Gambar", use_container_width=True, type="primary"
+    )
 
     if classify_clicked:
         with st.spinner("Menganalisis pola visual kostum..."):
             time.sleep(0.4)  # jeda kecil agar transisi terasa, bukan instan
-            result = model_loader.predict(model, mapping, image)
+            result = model_loader.predict(model, mapping, new_image)
 
         st.session_state["last_result"] = result
-        st.session_state["last_image_caption"] = uploaded_file.name
+        st.session_state["last_image_caption"] = new_image_name
         st.rerun()
 
 # ─────────────────────────────────────────────────────────────────
@@ -171,6 +219,43 @@ if "last_result" in st.session_state:
     st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
     styling.eyebrow("Hasil Klasifikasi")
 
+    if result.get("likely_out_of_scope"):
+        # ── Gambar kemungkinan BUKAN salah satu dari 5 kostum tari ──
+        st.markdown(
+            f"""
+            <div class="result-card" style="--accent-color:#A8456B;">
+                <div class="eyebrow" style="color:#A8456B;">⚠️ Gambar Tidak Sesuai</div>
+                <div class="pred-title" style="color:#A8456B; font-size:1.4rem;">
+                    Gambar ini sepertinya bukan salah satu dari 5 kostum tari yang dikenali sistem
+                </div>
+                <p style="margin-bottom:0.6rem;">
+                    Sistem ini hanya dilatih untuk mengenali lima kostum tari tradisional
+                    Jawa Tengah: <strong>Tari Bedhaya, Tari Dolalak, Tari Gambyong,
+                    Tari Golek, dan Tari Srimpi</strong>. Gambar yang kamu berikan tidak
+                    cukup cocok dengan pola visual kelima kostum tersebut.
+                </p>
+                <p class="muted-text" style="margin-bottom:0;">
+                    Tebakan terdekat model: <strong>{pred_info.get('nama_tampilan', result['pred_label'])}</strong>
+                    (keyakinan hanya {confidence:.1f}%) — tapi ini kemungkinan besar tidak akurat.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.info(
+            "💡 Coba unggah/foto ulang dengan gambar yang menampilkan dengan jelas "
+            "salah satu dari 5 kostum tari di atas, dari sudut yang lebih terlihat "
+            "dan pencahayaan yang cukup."
+        )
+
+        if st.button("🔄 Coba Gambar Lain", use_container_width=True):
+            del st.session_state["last_result"]
+            st.rerun()
+
+        st.stop()
+
+    # ── Hasil klasifikasi normal (model cukup yakin) ──
     if confidence < config.CONFIDENCE_THRESHOLD:
         st.warning(
             f"Model kurang yakin dengan prediksi ini (keyakinan "

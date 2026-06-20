@@ -28,6 +28,28 @@ IMG_SIZE = (224, 224)
 CONFIDENCE_THRESHOLD = 40.0  # % minimum sebelum dianggap "kurang yakin"
 
 # ─────────────────────────────────────────────────────────────────
+# DETEKSI GAMBAR "TIDAK SESUAI" (di luar 5 kelas kostum tari)
+# ─────────────────────────────────────────────────────────────────
+# Model hanya dilatih untuk 5 kelas ini, sehingga TIDAK punya cara native
+# untuk bilang "ini bukan kostum tari apapun" -- ia akan selalu memaksa
+# memilih salah satu dari 5 kelas. Untuk mendeteksi kemungkinan gambar
+# di luar cakupan ini, dipakai 2 sinyal tidak langsung (kombinasi,
+# sensitivitas "sedang" -- cukup ketat untuk menangkap kasus jelas,
+# tapi tidak terlalu agresif menolak foto kostum yang sah tapi buram):
+#
+#  1. OOD_CONFIDENCE_THRESHOLD : confidence kelas teratas terlalu rendah
+#     -> model sendiri tidak yakin sama sekali pada prediksinya.
+#  2. OOD_MARGIN_THRESHOLD     : selisih confidence kelas #1 vs #2 terlalu
+#     kecil -> model "ragu" antar beberapa kelas sekaligus, tanda umum
+#     saat memproses input yang tidak dikenali pola visualnya.
+#
+# Gambar ditandai "kemungkinan tidak sesuai" jika MEMENUHI SALAH SATU
+# kondisi di atas (OR), bukan harus keduanya sekaligus -- supaya tetap
+# sensitif menangkap kasus yang jelas tidak relevan.
+OOD_CONFIDENCE_THRESHOLD = 45.0  # % -- di bawah ini dianggap tidak yakin
+OOD_MARGIN_THRESHOLD = 12.0      # % -- selisih top-1 vs top-2 terlalu kecil
+
+# ─────────────────────────────────────────────────────────────────
 # DATA KATALOG TARI
 # Konten dirangkum dari BAB II.2.2.1 proposal skripsi (Fasya Maulinada,
 # "Pengembangan Model CNN Menggunakan Transfer Learning untuk Klasifikasi

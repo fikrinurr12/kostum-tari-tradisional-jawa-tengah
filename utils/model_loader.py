@@ -116,10 +116,14 @@ def predict(model, mapping, image: Image.Image):
 
     Mengembalikan dict:
       {
-        'pred_class_key'  : 'Tari_Bedhaya',   # key internal (folder/JSON)
-        'pred_label'      : 'Tari Bedhaya',   # label tampilan
-        'confidence'      : 92.4,             # persen
+        'pred_class_key'   : 'Tari_Bedhaya',   # key internal (folder/JSON)
+        'pred_label'       : 'Tari Bedhaya',   # label tampilan
+        'confidence'       : 92.4,             # persen
         'all_probabilities': {key: persen, ...}  # semua kelas, terurut desc
+        'margin'           : 78.1,             # selisih top-1 vs top-2 (persen)
+        'likely_out_of_scope': False,          # True jika kemungkinan bukan
+                                                # salah satu dari 5 kelas yang
+                                                # dilatih (lihat config.py)
       }
     """
     img_size = mapping["img_size"]
@@ -143,9 +147,26 @@ def predict(model, mapping, image: Image.Image):
     # Urutkan dari probabilitas tertinggi
     all_probs = dict(sorted(all_probs.items(), key=lambda x: x[1], reverse=True))
 
+    # ── Sinyal deteksi "kemungkinan di luar 5 kelas yang dilatih" ──
+    # Model softmax SELALU mengeluarkan total probabilitas 100% dibagi
+    # ke 5 kelas, walau gambarnya sama sekali bukan kostum tari (misal
+    # foto kucing) -- jadi tidak ada cara langsung model bilang "tidak
+    # tahu". Dua sinyal tidak langsung dipakai sebagai pendekatan:
+    sorted_probs = list(all_probs.values())
+    top1 = sorted_probs[0]
+    top2 = sorted_probs[1] if len(sorted_probs) > 1 else 0.0
+    margin = top1 - top2
+
+    likely_out_of_scope = (
+        top1 < config.OOD_CONFIDENCE_THRESHOLD
+        or margin < config.OOD_MARGIN_THRESHOLD
+    )
+
     return {
         "pred_class_key": pred_class_key,
         "pred_label": pred_label,
         "confidence": confidence,
         "all_probabilities": all_probs,
+        "margin": margin,
+        "likely_out_of_scope": likely_out_of_scope,
     }
