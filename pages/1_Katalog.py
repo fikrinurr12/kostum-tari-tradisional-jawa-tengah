@@ -1,8 +1,10 @@
 """
 pages/1_Katalog.py
-Halaman katalog seluruh jenis kostum tari. Jika diakses dari halaman
-hasil klasifikasi (lewat session_state['catalog_focus']), kartu kelas
-yang relevan otomatis ditampilkan terbuka/disorot di bagian atas.
+Halaman katalog seluruh jenis kostum tari, gaya editorial/majalah
+(kartu foto besar di atas, teks rapi di bawah) sesuai referensi visual.
+Jika diakses dari halaman hasil klasifikasi (lewat
+session_state['catalog_focus']), kartu kelas yang relevan otomatis
+ditampilkan terbuka/disorot di bagian atas.
 """
 
 import streamlit as st
@@ -11,45 +13,45 @@ import config
 from utils import styling
 
 st.set_page_config(
-    page_title="Katalog Kostum Tari · Tari Jawa Tengah",
+    page_title="Katalog · TariJateng",
     page_icon="📖",
     layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
 styling.inject_global_css()
 
 with st.sidebar:
-    st.markdown("### 🩰 Tari Jawa Tengah")
-    st.markdown(
-        '<span class="muted-text">Klasifikasi kostum tari tradisional '
-        "berbasis Deep Learning</span>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("### Tari Jateng")
     st.markdown("---")
     if st.button("⬅️ Kembali ke Beranda", use_container_width=True):
         st.switch_page("app.py")
+
+styling.render_navbar(active_page="Katalog")
 
 
 # ─────────────────────────────────────────────────────────────────
 # HEADER
 # ─────────────────────────────────────────────────────────────────
-styling.eyebrow("Referensi Budaya")
-st.markdown("# Katalog Kostum Tari Tradisional")
 st.markdown(
-    '<p class="muted-text" style="max-width:680px;">'
-    "Jelajahi lima jenis kostum tari tradisional Jawa Tengah yang "
-    "dikenali oleh sistem ini, lengkap dengan asal daerah, makna "
-    "budaya, dan ciri khas kostumnya."
+    '<div class="center-text">', unsafe_allow_html=True
+)
+st.markdown("# Katalog Kostum & Tari")
+st.markdown(
+    '<p class="lead-text" style="margin:0 auto; text-align:center;">'
+    "Sistem cerdas berbasis Machine Learning untuk mengidentifikasi "
+    "kostum tari tradisional Jawa Tengah secara instan."
     "</p>",
     unsafe_allow_html=True,
 )
+st.markdown("</div>", unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 
 focus_key = st.session_state.get("catalog_focus")
 
 if focus_key and focus_key in config.DANCE_CATALOG:
     info = config.DANCE_CATALOG[focus_key]
     accent = info["warna_aksen"]
-    st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
     styling.eyebrow("Hasil Klasifikasi Terakhir Kamu")
 
     st.markdown(
@@ -72,7 +74,6 @@ if focus_key and focus_key in config.DANCE_CATALOG:
         st.rerun()
 
     st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
-    st.markdown("### Semua Kostum Tari Lainnya")
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -80,7 +81,7 @@ if focus_key and focus_key in config.DANCE_CATALOG:
 # ─────────────────────────────────────────────────────────────────
 search_query = st.text_input(
     "Cari nama tari...",
-    placeholder="Contoh: Bedhaya, Dolalak, Gambyong...",
+    placeholder="🔍  Cari nama tari, misalnya Bedhaya atau Gambyong...",
     label_visibility="collapsed",
 )
 
@@ -98,11 +99,21 @@ if search_query.strip():
 if not display_keys:
     st.info("Tidak ada tarian yang cocok dengan pencarian kamu.")
 
+st.markdown("<br>", unsafe_allow_html=True)
+
 
 # ─────────────────────────────────────────────────────────────────
-# GRID KATALOG
+# GRID KATALOG -- gaya majalah, 3 kolom, foto besar di atas
 # ─────────────────────────────────────────────────────────────────
-cols_per_row = 2
+PLACEHOLDER_ICONS = {
+    "Tari_Bedhaya": "🕊️",
+    "Tari_Dolalak": "🎖️",
+    "Tari_Gambyong": "🌸",
+    "Tari_Golek": "💄",
+    "Tari_Srimpi": "🍃",
+}
+
+cols_per_row = 3
 rows = [display_keys[i:i + cols_per_row] for i in range(0, len(display_keys), cols_per_row)]
 
 for row in rows:
@@ -110,24 +121,32 @@ for row in rows:
     for col, key in zip(cols, row):
         info = config.DANCE_CATALOG[key]
         accent = info["warna_aksen"]
+        photo_path = config.get_catalog_image_path(key)
+
         with col:
+            st.markdown('<div class="catalog-card">', unsafe_allow_html=True)
+
+            if photo_path:
+                st.markdown('<div class="catalog-card-image">', unsafe_allow_html=True)
+                st.image(photo_path, use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+            else:
+                icon = PLACEHOLDER_ICONS.get(key, "🪭")
+                st.markdown(
+                    f'<div class="catalog-card-image" style="color:{accent};">{icon}</div>',
+                    unsafe_allow_html=True,
+                )
+
             st.markdown(
                 f"""
-                <div class="catalog-card">
-                    <div class="catalog-card-header" style="border-top: 4px solid {accent};">
-                        <div class="eyebrow" style="color:{accent};">{info['asal']}</div>
-                        <div style="font-family:{styling.FONT_DISPLAY}; font-size:1.4rem; font-weight:700;">
-                            {info['nama_tampilan']}
-                        </div>
-                        <span class="badge">{info['karakter']}</span>
-                    </div>
-                    <div class="catalog-card-body">
-                        <p style="margin-top:0;">{info['ringkasan']}</p>
-                    </div>
+                <div class="catalog-card-title">{info['nama_tampilan']}</div>
+                <p class="catalog-card-desc">{info['ringkasan']}</p>
+                <span class="badge" style="margin-top:0.5rem;">{info['asal']}</span>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
+
             with st.expander(f"Lihat detail {info['nama_tampilan']}"):
                 st.markdown(info["deskripsi"])
                 st.markdown("**Ciri khas kostum:**")
@@ -142,3 +161,5 @@ st.caption(
     "Klasifikasi Kostum Tari Tradisional Jawa Tengah* (Fasya Maulinada, "
     "Universitas Muria Kudus, 2025)."
 )
+
+styling.render_footer()

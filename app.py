@@ -16,31 +16,24 @@ import config
 from utils import model_loader, styling
 
 st.set_page_config(
-    page_title="Klasifikasi Kostum Tari Jawa Tengah",
+    page_title="TariJateng — Klasifikasi Kostum Tari Jawa Tengah",
     page_icon="🩰",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 styling.inject_global_css()
 
 
 # ─────────────────────────────────────────────────────────────────
-# SIDEBAR
+# SIDEBAR (tetap dipertahankan untuk navigasi multipage Streamlit,
+# meski secara visual navbar atas jadi fokus utama)
 # ─────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### 🩰 Tari Jawa Tengah")
+    st.markdown("### Tari Jateng")
     st.markdown(
         '<span class="muted-text">Klasifikasi kostum tari tradisional '
         "berbasis Deep Learning</span>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("---")
-    st.markdown(
-        '<span class="muted-text">'
-        "Model: CNN MobileNetV2 (Transfer Learning)<br>"
-        "5 kelas kostum tari Jawa Tengah"
-        "</span>",
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -52,42 +45,60 @@ with st.sidebar:
 
 
 # ─────────────────────────────────────────────────────────────────
+# NAVBAR
+# ─────────────────────────────────────────────────────────────────
+styling.render_navbar(active_page="Home")
+
+
+# ─────────────────────────────────────────────────────────────────
 # HERO / BERANDA
 # ─────────────────────────────────────────────────────────────────
-col_hero_text, col_hero_visual = st.columns([1.3, 1], gap="large")
+col_hero_text, col_hero_visual = st.columns([1.2, 1], gap="large")
 
 with col_hero_text:
-    styling.eyebrow("Pelestarian Budaya · Kecerdasan Buatan")
-    st.markdown("# Kenali Kostum Tari Tradisional Jawa Tengah")
     st.markdown(
-        '<p style="font-size:1.05rem; line-height:1.6; max-width:560px;">'
-        "Unggah foto kostum tari, dan sistem akan mengenali jenisnya "
-        "secara otomatis menggunakan model Convolutional Neural Network "
-        "(CNN) dengan pendekatan Transfer Learning arsitektur "
-        "MobileNetV2 — dilatih untuk mengenali lima kostum tari khas "
-        "Jawa Tengah."
-        "</p>",
+        '<h1 style="margin-bottom:1rem;">Kenali Warisan<br>Budaya Lewat<br>Satu Foto.</h1>',
         unsafe_allow_html=True,
     )
-    badges = " ".join(
+    st.markdown(
+        '<p class="lead-text">Sistem cerdas berbasis Machine Learning untuk '
+        "mengidentifikasi kostum tari tradisional Jawa Tengah secara "
+        "instan. Unggah foto atau ambil langsung dari kamera, dan "
+        "biarkan model CNN MobileNetV2 mengenalinya.</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown("<br>", unsafe_allow_html=True)
+    badges = "".join(
         f'<span class="badge">{config.DANCE_CATALOG[k]["nama_tampilan"]}</span>'
         for k in config.CLASS_ORDER
     )
     st.markdown(badges, unsafe_allow_html=True)
 
 with col_hero_visual:
-    st.markdown(
-        f"""
-        <div class="card" style="text-align:center; padding:2rem 1.5rem;">
-            <div style="font-size:3rem;">🪭</div>
-            <div class="eyebrow" style="margin-top:0.5rem;">Lima Kelas Kostum</div>
-            <div style="font-family:{styling.FONT_DISPLAY}; font-size:1.4rem; font-weight:700;">
-                Bedhaya · Dolalak · Gambyong<br>Golek · Srimpi
+    hero_photo_found = False
+    for k in config.CLASS_ORDER:
+        photo_path = config.get_catalog_image_path(k)
+        if photo_path:
+            st.image(photo_path, use_container_width=True)
+            hero_photo_found = True
+            break
+
+    if not hero_photo_found:
+        st.markdown(
+            f"""
+            <div class="card" style="text-align:center; padding:3rem 1.5rem; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                <div style="font-size:3.5rem; margin-bottom:0.8rem;">🪭</div>
+                <div class="eyebrow">Lima Kelas Kostum</div>
+                <div style="font-family:{styling.FONT_DISPLAY}; font-size:1.5rem; font-weight:700; line-height:1.4;">
+                    Bedhaya · Dolalak<br>Gambyong · Golek · Srimpi
+                </div>
+                <p class="muted-text" style="margin-top:0.8rem;">
+                    Letakkan foto di assets/catalog/&lt;nama_kelas&gt;.jpg untuk menampilkan visual di sini
+                </p>
             </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+            """,
+            unsafe_allow_html=True,
+        )
 
 st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
 
@@ -123,7 +134,7 @@ if model_error:
 styling.eyebrow("Coba Sekarang")
 st.markdown("## Unggah atau Foto Kostum Tari")
 st.markdown(
-    '<p class="muted-text">Gunakan foto yang jelas, dengan kostum tari '
+    '<p class="lead-text">Gunakan foto yang jelas, dengan kostum tari '
     "terlihat penuh dan tidak tertutup objek lain, untuk hasil terbaik. "
     "Jika dibuka lewat HP, kamu juga bisa langsung memotret dari tab "
     '"Ambil Foto".</p>',
@@ -311,3 +322,5 @@ if "last_result" in st.session_state:
         if st.button("🔄 Klasifikasikan Gambar Lain", use_container_width=True):
             del st.session_state["last_result"]
             st.rerun()
+
+styling.render_footer()

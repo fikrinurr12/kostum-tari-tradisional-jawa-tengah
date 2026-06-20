@@ -32,22 +32,23 @@ CONFIDENCE_THRESHOLD = 40.0  # % minimum sebelum dianggap "kurang yakin"
 # ─────────────────────────────────────────────────────────────────
 # Model hanya dilatih untuk 5 kelas ini, sehingga TIDAK punya cara native
 # untuk bilang "ini bukan kostum tari apapun" -- ia akan selalu memaksa
-# memilih salah satu dari 5 kelas. Untuk mendeteksi kemungkinan gambar
-# di luar cakupan ini, dipakai 2 sinyal tidak langsung (kombinasi,
-# sensitivitas "sedang" -- cukup ketat untuk menangkap kasus jelas,
-# tapi tidak terlalu agresif menolak foto kostum yang sah tapi buram):
+# memilih salah satu dari 5 kelas, dan softmax kadang tetap memberi
+# confidence cukup tinggi ke satu kelas meski input sama sekali tidak
+# relevan (mis. foto makanan/minuman). Threshold di bawah ini SENGAJA
+# dibuat ketat (bukan "sedang" lagi) berdasarkan pengujian langsung:
+# threshold longgar sebelumnya (45%/12%) masih meloloskan foto
+# makanan/minuman sebagai salah satu kostum tari.
 #
-#  1. OOD_CONFIDENCE_THRESHOLD : confidence kelas teratas terlalu rendah
-#     -> model sendiri tidak yakin sama sekali pada prediksinya.
-#  2. OOD_MARGIN_THRESHOLD     : selisih confidence kelas #1 vs #2 terlalu
-#     kecil -> model "ragu" antar beberapa kelas sekaligus, tanda umum
-#     saat memproses input yang tidak dikenali pola visualnya.
+#  1. OOD_CONFIDENCE_THRESHOLD : confidence kelas teratas harus tinggi
+#     (>=70%) untuk dianggap valid -- di bawah ini ditandai tidak sesuai.
+#  2. OOD_MARGIN_THRESHOLD     : selisih confidence kelas #1 vs #2 juga
+#     harus cukup besar -- model yang benar-benar yakin pada satu kelas
+#     dari 5 yang dilatih biasanya unggul jauh dari kelas kedua.
 #
 # Gambar ditandai "kemungkinan tidak sesuai" jika MEMENUHI SALAH SATU
-# kondisi di atas (OR), bukan harus keduanya sekaligus -- supaya tetap
-# sensitif menangkap kasus yang jelas tidak relevan.
-OOD_CONFIDENCE_THRESHOLD = 60.0  # % -- di bawah ini dianggap tidak yakin
-OOD_MARGIN_THRESHOLD = 20.0      # % -- selisih top-1 vs top-2 terlalu kecil
+# kondisi di bawah (OR) -- confidence rendah ATAU margin tipis.
+OOD_CONFIDENCE_THRESHOLD = 60.0  # % -- di bawah ini dianggap tidak sesuai
+OOD_MARGIN_THRESHOLD = 20.0      # % -- selisih top-1 vs top-2 harus signifikan
 
 # ─────────────────────────────────────────────────────────────────
 # DATA KATALOG TARI
@@ -196,3 +197,22 @@ CLASS_ORDER = [
     "Tari_Golek",
     "Tari_Srimpi",
 ]
+
+
+def get_catalog_image_path(class_key: str):
+    """
+    Mencari file foto untuk kelas tertentu di folder assets/catalog/.
+    Mendukung beberapa ekstensi umum. Mengembalikan path string jika
+    ditemukan, atau None jika belum ada foto untuk kelas itu (UI akan
+    menampilkan placeholder elegan sebagai fallback).
+
+    Penamaan file yang dicari: <class_key>.jpg / .jpeg / .png / .webp
+    Contoh: assets/catalog/Tari_Bedhaya.jpg
+    """
+    if not os.path.isdir(CATALOG_IMG_DIR):
+        return None
+    for ext in (".jpg", ".jpeg", ".png", ".webp"):
+        candidate = os.path.join(CATALOG_IMG_DIR, f"{class_key}{ext}")
+        if os.path.exists(candidate):
+            return candidate
+    return None

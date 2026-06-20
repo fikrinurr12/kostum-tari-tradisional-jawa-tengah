@@ -1,0 +1,20 @@
+Letakkan foto kostum tari di folder ini dengan PENAMAAN PERSIS seperti
+ini (sesuai key kelas internal, bukan nama tampilan):
+
+  Tari_Bedhaya.jpg
+  Tari_Dolalak.jpg
+  Tari_Gambyong.jpg
+  Tari_Golek.jpg
+  Tari_Srimpi.jpg
+
+Ekstensi yang didukung: .jpg, .jpeg, .png, .webp (pilih salah satu per
+kelas, tidak perlu semua).
+
+Jika foto untuk kelas tertentu belum ada, aplikasi akan otomatis
+menampilkan placeholder ikon sebagai pengganti -- tidak akan error.
+
+Foto pertama yang ditemukan (urutan: Bedhaya, Dolalak, Gambyong, Golek,
+Srimpi) juga akan dipakai sebagai foto hero di halaman utama.
+
+Rekomendasi: gunakan foto dengan rasio mendekati 4:3 atau persegi untuk
+tampilan kartu katalog yang konsisten dan rapi.
