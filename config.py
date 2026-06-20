@@ -46,8 +46,8 @@ CONFIDENCE_THRESHOLD = 40.0  # % minimum sebelum dianggap "kurang yakin"
 # Gambar ditandai "kemungkinan tidak sesuai" jika MEMENUHI SALAH SATU
 # kondisi di atas (OR), bukan harus keduanya sekaligus -- supaya tetap
 # sensitif menangkap kasus yang jelas tidak relevan.
-OOD_CONFIDENCE_THRESHOLD = 45.0  # % -- di bawah ini dianggap tidak yakin
-OOD_MARGIN_THRESHOLD = 12.0      # % -- selisih top-1 vs top-2 terlalu kecil
+OOD_CONFIDENCE_THRESHOLD = 60.0  # % -- di bawah ini dianggap tidak yakin
+OOD_MARGIN_THRESHOLD = 20.0      # % -- selisih top-1 vs top-2 terlalu kecil
 
 # ─────────────────────────────────────────────────────────────────
 # DATA KATALOG TARI
