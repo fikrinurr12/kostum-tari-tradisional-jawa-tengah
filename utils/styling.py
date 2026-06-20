@@ -320,8 +320,11 @@ def inject_global_css():
         }}
 
         /* ── Navbar link button (st.button disulap jadi link teks) ── */
-        /* Kecilkan gap antar kolom KHUSUS di dalam wrapper menu navbar,
-           supaya 3 tombol menu tidak terlihat renggang. */
+        /* Selector dikonfirmasi LANGSUNG dari hasil inspect element
+           browser: tombol Streamlit punya data-testid="baseButton-secondary"
+           pada elemen <button> itu sendiri (bukan pada div pembungkusnya). */
+
+        /* Kecilkan gap antar kolom KHUSUS di dalam wrapper menu navbar. */
         div.navbar-menu-wrapper [data-testid="stHorizontalBlock"] {{
             gap: 0.2rem !important;
         }}
@@ -332,14 +335,15 @@ def inject_global_css():
             padding: 0 0.4rem !important;
         }}
 
-        /* Reset border/box SEMUA tombol di dalam wrapper navbar secara
-           langsung (tidak bergantung pada sibling selector yang rapuh
-           terhadap perubahan struktur DOM Streamlit antar versi). */
-        div.navbar-menu-wrapper button {{
+        /* Reset border/box langsung di elemen <button> via testid yang
+           sudah dikonfirmasi -- ini selector paling pasti, tidak
+           bergantung pada class Emotion yang acak/dinamis. */
+        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"] {{
             background-color: transparent !important;
             background: transparent !important;
-            border: none !important;
-            border-width: 0px !important;
+            border: 0 !important;
+            border-style: none !important;
+            border-width: 0 !important;
             border-color: transparent !important;
             box-shadow: none !important;
             outline: none !important;
@@ -348,27 +352,27 @@ def inject_global_css():
             font-size: 0.95rem;
             white-space: nowrap;
         }}
-        div.navbar-menu-wrapper button:hover,
-        div.navbar-menu-wrapper button:focus,
-        div.navbar-menu-wrapper button:active,
-        div.navbar-menu-wrapper button:focus:not(:active) {{
+        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"]:hover,
+        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"]:focus,
+        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"]:active,
+        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"]:focus:not(:active) {{
             background-color: transparent !important;
             background: transparent !important;
-            border: none !important;
-            border-width: 0px !important;
+            border: 0 !important;
+            border-style: none !important;
             box-shadow: none !important;
             outline: none !important;
             color: {COLORS['terracotta']} !important;
         }}
-        div.navbar-menu-wrapper button:hover p,
-        div.navbar-menu-wrapper button:focus p {{
+        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"] p {{
+            margin: 0;
+        }}
+        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"]:hover p,
+        div.navbar-menu-wrapper button[data-testid="baseButton-secondary"]:focus p {{
             color: {COLORS['terracotta']} !important;
         }}
 
-        /* Warna aktif vs inactive -- tetap lewat marker sibling div,
-           karena ini hanya untuk WARNA (bukan border/box yang sudah
-           direset langsung di atas), jadi lebih toleran kalau sibling
-           selector ini tidak match sempurna. */
+        /* Warna aktif vs inactive lewat marker sibling div */
         div.navbtn-active + div[data-testid="stButton"] button,
         div.navbtn-active + div[data-testid="stButton"] button p {{
             color: {COLORS['terracotta']} !important;
@@ -377,6 +381,45 @@ def inject_global_css():
         div.navbtn-inactive + div[data-testid="stButton"] button,
         div.navbtn-inactive + div[data-testid="stButton"] button p {{
             color: {COLORS['ink_soft']} !important;
+        }}
+
+        /* ── Navbar responsif di mobile: paksa tetap horizontal ──── */
+        /* Streamlit secara default men-stack st.columns jadi vertikal
+           di layar sempit (<~640px). Aturan ini menimpa perilaku itu
+           KHUSUS untuk wrapper menu navbar, supaya 3 tombol tetap
+           sejajar horizontal meski dibuka di HP. */
+        @media (max-width: 640px) {{
+            div.navbar-menu-wrapper [data-testid="stHorizontalBlock"] {{
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                gap: 0.1rem !important;
+            }}
+            div.navbar-menu-wrapper [data-testid="stColumn"] {{
+                width: fit-content !important;
+                flex: 0 0 auto !important;
+                padding: 0 0.15rem !important;
+            }}
+            div.navbar-menu-wrapper button[data-testid="baseButton-secondary"] {{
+                font-size: 0.78rem !important;
+                padding: 0.2rem 0.3rem !important;
+            }}
+            /* Baris terluar (brand + grup menu) juga dipaksa tetap
+               horizontal di mobile, supaya brand tidak terpisah jauh
+               ke atas sendirian seperti pada layout default Streamlit.
+               st.container(key="navbar_outer_container") menghasilkan
+               class "st-key-navbar_outer_container" secara otomatis. */
+            div[class*="st-key-navbar_outer_container"] [data-testid="stHorizontalBlock"] {{
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                align-items: center !important;
+            }}
+            div[class*="st-key-navbar_outer_container"] [data-testid="stColumn"] {{
+                width: auto !important;
+                min-width: 0 !important;
+            }}
+            .navbar-brand {{
+                font-size: 1.1rem !important;
+            }}
         }}
 
         /* ── Chart container (Confusion Matrix / Accuracy) ──────── */
@@ -440,27 +483,29 @@ def render_navbar(active_page: str = "Home"):
     if active_page == "Tentang":
         active_page = "Tentang ML"
 
-    col_brand, col_menu = st.columns([3, 2.2])
+    navbar_container = st.container(key="navbar_outer_container")
+    with navbar_container:
+        col_brand, col_menu = st.columns([3, 2.2])
 
-    with col_brand:
-        st.markdown(
-            '<div class="navbar-brand" style="padding-top:0.3rem;">Tari<span>Jateng</span></div>',
-            unsafe_allow_html=True,
-        )
+        with col_brand:
+            st.markdown(
+                '<div class="navbar-brand" style="padding-top:0.3rem;">Tari<span>Jateng</span></div>',
+                unsafe_allow_html=True,
+            )
 
-    switched_to = None
-    with col_menu:
-        st.markdown('<div class="navbar-menu-wrapper">', unsafe_allow_html=True)
-        btn_cols = st.columns(len(pages))
-        for col, page_name in zip(btn_cols, pages):
-            with col:
-                is_active = (page_name == active_page)
-                btn_class_marker = "navbtn-active" if is_active else "navbtn-inactive"
-                st.markdown(f'<div class="{btn_class_marker}">', unsafe_allow_html=True)
-                if st.button(page_name, key=f"navbtn_{page_name}", type="secondary"):
-                    switched_to = page_name
-                st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        switched_to = None
+        with col_menu:
+            st.markdown('<div class="navbar-menu-wrapper">', unsafe_allow_html=True)
+            btn_cols = st.columns(len(pages))
+            for col, page_name in zip(btn_cols, pages):
+                with col:
+                    is_active = (page_name == active_page)
+                    btn_class_marker = "navbtn-active" if is_active else "navbtn-inactive"
+                    st.markdown(f'<div class="{btn_class_marker}">', unsafe_allow_html=True)
+                    if st.button(page_name, key=f"navbtn_{page_name}", type="secondary"):
+                        switched_to = page_name
+                    st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<hr class="thin-divider" style="margin-top:0.5rem;">', unsafe_allow_html=True)
 
