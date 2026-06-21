@@ -83,12 +83,6 @@ def render_accuracy_chart(acc_history, val_acc_history=None):
     fig.tight_layout()
     return fig
 
-with st.sidebar:
-    st.markdown("### Tari Jateng")
-    st.markdown("---")
-    if st.button("⬅️ Kembali ke Beranda", use_container_width=True):
-        st.switch_page("app.py")
-
 _switched = styling.render_navbar(active_page="Tentang ML")
 if _switched:
     st.stop()

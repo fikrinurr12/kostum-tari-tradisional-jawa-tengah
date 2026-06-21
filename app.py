@@ -26,25 +26,6 @@ styling.inject_global_css()
 
 
 # ─────────────────────────────────────────────────────────────────
-# SIDEBAR (tetap dipertahankan untuk navigasi multipage Streamlit,
-# meski secara visual navbar atas jadi fokus utama)
-# ─────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("### Tari Jateng")
-    st.markdown(
-        '<span class="muted-text">Klasifikasi kostum tari tradisional '
-        "berbasis Deep Learning</span>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("---")
-    st.caption(
-        "Skripsi: *Pengembangan Model CNN Menggunakan Transfer Learning "
-        "untuk Klasifikasi Kostum Tari Tradisional Jawa Tengah*"
-    )
-    st.caption("Fasya Maulinada · Universitas Muria Kudus · 2025")
-
-
-# ─────────────────────────────────────────────────────────────────
 # NAVBAR
 # ─────────────────────────────────────────────────────────────────
 _switched = styling.render_navbar(active_page="Home")

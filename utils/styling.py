@@ -47,9 +47,23 @@ def inject_global_css():
             background-color: {COLORS['paper']};
         }}
 
+        /* ── Sembunyikan sidebar bawaan Streamlit secara TOTAL ──── */
+        /* Sidebar otomatis muncul karena struktur multipage app
+           (folder pages/), beserta daftar navigasi auto-generated dan
+           tombol toggle "<" / ">". Karena navbar kustom di atas sudah
+           menggantikan fungsinya, sidebar ini disembunyikan total. */
         section[data-testid="stSidebar"] {{
-            background-color: {COLORS['paper']};
-            border-right: 1px solid {COLORS['border']};
+            display: none !important;
+        }}
+        button[data-testid="stSidebarCollapseButton"],
+        button[data-testid="baseButton-headerNoPadding"],
+        div[data-testid="collapsedControl"] {{
+            display: none !important;
+        }}
+        /* Pastikan area konten utama memakai lebar penuh karena
+           sidebar tidak lagi mengambil ruang di kiri. */
+        section[data-testid="stMain"] {{
+            margin-left: 0 !important;
         }}
 
         /* ── Navbar kustom (brand + menu) ──────────────────────── */

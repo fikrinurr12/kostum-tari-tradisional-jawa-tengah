@@ -20,12 +20,6 @@ st.set_page_config(
 
 styling.inject_global_css()
 
-with st.sidebar:
-    st.markdown("### Tari Jateng")
-    st.markdown("---")
-    if st.button("⬅️ Kembali ke Beranda", use_container_width=True):
-        st.switch_page("app.py")
-
 _switched = styling.render_navbar(active_page="Katalog")
 if _switched:
     st.stop()
