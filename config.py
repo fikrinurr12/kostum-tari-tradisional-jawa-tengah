@@ -54,8 +54,43 @@ FALLBACK_DATASET_TOTAL = 1335
 #
 # Gambar ditandai "kemungkinan tidak sesuai" jika MEMENUHI SALAH SATU
 # kondisi di bawah (OR) -- confidence rendah ATAU margin tipis.
-OOD_CONFIDENCE_THRESHOLD = 70.0  # % -- di bawah ini dianggap tidak sesuai
+OOD_CONFIDENCE_THRESHOLD = 60.0  # % -- di bawah ini dianggap tidak sesuai
 OOD_MARGIN_THRESHOLD = 20.0      # % -- selisih top-1 vs top-2 harus signifikan
+
+# ─────────────────────────────────────────────────────────────────
+# DETEKSI WAJAH DOMINAN (anti-selfie)
+# ─────────────────────────────────────────────────────────────────
+# Model klasifikasi tetap bisa sangat "yakin" (>90%) terhadap foto
+# wajah/selfie yang sebenarnya sama sekali bukan kostum tari, karena
+# model hanya dilatih membedakan 5 kelas tari satu sama lain -- bukan
+# membedakan "kostum tari" vs "bukan kostum tari" secara umum. Sinyal
+# confidence/margin saja tidak cukup menangkap kasus ini (ditemukan
+# lewat pengujian langsung: foto selfie terdeteksi 98.6% sebagai
+# salah satu kostum tari). Deteksi wajah dipakai sebagai sinyal
+# TAMBAHAN yang independen dari confidence model.
+FACE_AREA_THRESHOLD = 0.12  # proporsi luas wajah/luas gambar dianggap "dominan"
+
+# ─────────────────────────────────────────────────────────────────
+# DETEKSI BENDA POLOS (anti botol/piring/lampu/dll)
+# ─────────────────────────────────────────────────────────────────
+# Sinyal tambahan di luar deteksi wajah: benda sehari-hari yang permukaannya
+# polos/halus (botol kaca, piring keramik, lampu, dsb) ditandai lewat 3
+# pengukuran visual SEDERHANA (BUKAN model machine learning terpisah,
+# hanya heuristik fitur citra dasar -- tetap konsisten dengan cakupan
+# skripsi yang berfokus pada CNN MobileNetV2, bukan deteksi objek):
+#   - edge_density     : kepadatan tepi (Canny). Kain bermotif punya
+#     banyak tepi; permukaan polos jauh lebih sedikit.
+#   - color_diversity   : jumlah warna dominan unik di histogram Hue.
+#     Kostum tari biasanya multi-warna; benda polos sering 1-2 warna.
+#   - saturation_mean   : rata-rata saturasi warna. Kain tradisional
+#     umumnya saturasi tinggi (warna mencolok).
+# Ketiga kondisi harus terpenuhi BERSAMAAN (AND, bukan OR) sebelum
+# ditandai "likely_plain_object" -- supaya tidak terlalu agresif
+# menolak foto kostum tari yang sah tapi kebetulan fotonya minim
+# tekstur (misal kostum polos tanpa motif, foto agak overexposed, dst).
+PLAIN_OBJECT_EDGE_THRESHOLD = 0.05        # di bawah ini dianggap "kurang bertekstur"
+PLAIN_OBJECT_COLOR_THRESHOLD = 4          # di bawah ini dianggap "warna terlalu monoton"
+PLAIN_OBJECT_SATURATION_THRESHOLD = 60.0  # di bawah ini dianggap "warna kurang mencolok" (skala 0-255)
 
 # ─────────────────────────────────────────────────────────────────
 # DATA KATALOG TARI

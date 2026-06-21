@@ -24,6 +24,135 @@ import config
 
 
 @st.cache_resource(show_spinner=False)
+def load_face_detector():
+    """
+    Memuat Haar Cascade classifier untuk deteksi wajah (bawaan OpenCV,
+    tidak perlu file model tambahan -- sudah ter-bundle di paket
+    opencv-python-headless itu sendiri).
+
+    Mengembalikan tuple (detector, error_message).
+    """
+    try:
+        import cv2
+    except ImportError as e:
+        return None, (
+            "OpenCV gagal diimpor. Pastikan `opencv-python-headless` "
+            f"tercantum di requirements.txt. Detail: {e}"
+        )
+
+    cascade_path = os.path.join(
+        cv2.data.haarcascades, "haarcascade_frontalface_default.xml"
+    )
+    detector = cv2.CascadeClassifier(cascade_path)
+
+    if detector.empty():
+        return None, "Gagal memuat file Haar Cascade untuk deteksi wajah."
+
+    return detector, None
+
+
+def detect_dominant_face(image: Image.Image, detector, area_threshold=None):
+    """
+    Mendeteksi apakah ada wajah yang DOMINAN (cukup besar relatif
+    terhadap ukuran gambar) di dalam foto -- indikasi kuat ini adalah
+    foto selfie/wajah, bukan foto kostum tari.
+
+    area_threshold: proporsi minimum (luas wajah / luas gambar) untuk
+    dianggap "dominan". Default diambil dari config.FACE_AREA_THRESHOLD
+    jika tidak diberikan secara eksplisit.
+
+    Mengembalikan dict: {'face_detected': bool, 'dominant_face': bool,
+                          'largest_face_ratio': float}
+    """
+    import cv2
+
+    if area_threshold is None:
+        area_threshold = config.FACE_AREA_THRESHOLD
+
+    img_array = np.array(image.convert("RGB"))
+    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+
+    faces = detector.detectMultiScale(
+        gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40)
+    )
+
+    if len(faces) == 0:
+        return {"face_detected": False, "dominant_face": False, "largest_face_ratio": 0.0}
+
+    image_area = gray.shape[0] * gray.shape[1]
+    largest_face_area = max(w * h for (x, y, w, h) in faces)
+    largest_face_ratio = largest_face_area / image_area
+
+    return {
+        "face_detected": True,
+        "dominant_face": largest_face_ratio >= area_threshold,
+        "largest_face_ratio": largest_face_ratio,
+    }
+
+
+def analyze_image_texture(image: Image.Image):
+    """
+    Menganalisis kompleksitas visual gambar secara sederhana (BUKAN
+    deteksi objek/klasifikasi machine learning, hanya pengukuran fitur
+    citra dasar) untuk membantu menyaring foto yang kemungkinan bukan
+    kostum tari -- misalnya benda polos seperti botol, piring, atau
+    lampu yang permukaannya cenderung halus dan warnanya terbatas,
+    berbeda dari kain/kostum tari yang biasanya kaya motif dan warna.
+
+    Tiga sinyal yang dihitung:
+      1. edge_density   : kepadatan tepi (deteksi Canny). Kain bermotif
+         batik/tradisional cenderung punya banyak tepi kompleks;
+         permukaan benda polos (kaca, keramik, logam) jauh lebih sedikit.
+      2. color_diversity: jumlah warna dominan unik (lewat kuantisasi
+         histogram HSV). Kostum tari biasanya multi-warna (motif kain,
+         aksesori); benda sehari-hari sering didominasi 1-2 warna saja.
+      3. saturation_mean: rata-rata saturasi warna. Kain tradisional
+         umumnya saturasi tinggi (warna mencolok khas batik/tenun).
+
+    PENTING -- ini heuristik sederhana, BUKAN model machine learning,
+    dan tidak selalu akurat 100%. Dipakai sebagai SINYAL TAMBAHAN saja,
+    dikombinasikan dengan sinyal confidence/margin yang sudah ada.
+
+    Mengembalikan dict: {'edge_density': float, 'color_diversity': int,
+                          'saturation_mean': float, 'likely_plain_object': bool}
+    """
+    import cv2
+
+    img_array = np.array(image.convert("RGB"))
+    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+    hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+
+    # ── 1. Edge density (kepadatan tepi via Canny) ──────────────
+    edges = cv2.Canny(gray, threshold1=50, threshold2=150)
+    edge_density = float(np.count_nonzero(edges)) / edges.size
+
+    # ── 2. Color diversity (jumlah "bin" warna dominan di histogram H) ──
+    hist_h = cv2.calcHist([hsv], [0], None, [32], [0, 180])
+    hist_h_norm = hist_h / (hist_h.sum() + 1e-6)
+    # Hitung berapa banyak bin yang punya proporsi signifikan (>2%)
+    color_diversity = int(np.count_nonzero(hist_h_norm > 0.02))
+
+    # ── 3. Saturation mean (rata-rata saturasi warna) ───────────
+    saturation_mean = float(hsv[:, :, 1].mean())
+
+    # ── Gabungkan jadi satu sinyal "kemungkinan benda polos" ────
+    # Ketiga kondisi berikut umum pada benda sehari-hari yang halus/
+    # monokrom (botol kaca, piring keramik putih, lampu, dsb):
+    likely_plain_object = (
+        edge_density < config.PLAIN_OBJECT_EDGE_THRESHOLD
+        and color_diversity < config.PLAIN_OBJECT_COLOR_THRESHOLD
+        and saturation_mean < config.PLAIN_OBJECT_SATURATION_THRESHOLD
+    )
+
+    return {
+        "edge_density": edge_density,
+        "color_diversity": color_diversity,
+        "saturation_mean": saturation_mean,
+        "likely_plain_object": likely_plain_object,
+    }
+
+
+@st.cache_resource(show_spinner=False)
 def load_class_mapping():
     """
     Memuat mapping kelas dari class_mapping.json yang dihasilkan notebook
@@ -110,7 +239,7 @@ def preprocess_image(image: Image.Image, target_size):
     return np.expand_dims(arr, axis=0)
 
 
-def predict(model, mapping, image: Image.Image):
+def predict(model, mapping, image: Image.Image, face_detector=None):
     """
     Menjalankan prediksi pada satu gambar.
 
@@ -124,6 +253,7 @@ def predict(model, mapping, image: Image.Image):
         'likely_out_of_scope': False,          # True jika kemungkinan bukan
                                                 # salah satu dari 5 kelas yang
                                                 # dilatih (lihat config.py)
+        'reason'           : None / 'dominant_face' / 'low_confidence',
       }
     """
     img_size = mapping["img_size"]
@@ -147,20 +277,58 @@ def predict(model, mapping, image: Image.Image):
     # Urutkan dari probabilitas tertinggi
     all_probs = dict(sorted(all_probs.items(), key=lambda x: x[1], reverse=True))
 
-    # ── Sinyal deteksi "kemungkinan di luar 5 kelas yang dilatih" ──
-    # Model softmax SELALU mengeluarkan total probabilitas 100% dibagi
-    # ke 5 kelas, walau gambarnya sama sekali bukan kostum tari (misal
-    # foto kucing) -- jadi tidak ada cara langsung model bilang "tidak
-    # tahu". Dua sinyal tidak langsung dipakai sebagai pendekatan:
+    # ── Sinyal 1: deteksi wajah dominan (foto selfie/wajah) ───────
+    # Dijalankan & dicek LEBIH DULU karena ini sinyal yang independen
+    # dari confidence model -- model softmax tetap bisa sangat "yakin"
+    # (>90%) terhadap foto wajah yang sebenarnya sama sekali bukan
+    # kostum tari, karena ia hanya dilatih membedakan 5 kelas tari satu
+    # sama lain, bukan membedakan "tari" vs "bukan tari" secara umum.
+    face_info = {"face_detected": False, "dominant_face": False, "largest_face_ratio": 0.0}
+    if face_detector is not None:
+        try:
+            face_info = detect_dominant_face(image, face_detector)
+        except Exception:
+            # Jika deteksi wajah gagal karena alasan apapun (gambar
+            # korup, dll), JANGAN blokir prediksi utama -- lanjut
+            # dengan sinyal confidence/margin saja sebagai fallback.
+            pass
+
+    # ── Sinyal 2: kompleksitas tekstur/warna (benda polos) ────────
+    # Dijalankan independen dari confidence model, untuk menangkap
+    # benda sehari-hari (botol, piring, lampu, dsb) yang permukaannya
+    # polos/halus -- model klasifikasi tetap bisa "yakin" terhadap
+    # benda-benda ini karena hanya dilatih membedakan 5 kelas tari.
+    texture_info = {"edge_density": 0.0, "color_diversity": 0, "saturation_mean": 0.0, "likely_plain_object": False}
+    try:
+        texture_info = analyze_image_texture(image)
+    except Exception:
+        # Jika analisis gagal karena alasan apapun, JANGAN blokir
+        # prediksi utama -- lanjut dengan sinyal lain sebagai fallback.
+        pass
+
+    # ── Sinyal 3: confidence & margin (pendekatan sebelumnya) ─────
     sorted_probs = list(all_probs.values())
     top1 = sorted_probs[0]
     top2 = sorted_probs[1] if len(sorted_probs) > 1 else 0.0
     margin = top1 - top2
 
-    likely_out_of_scope = (
+    low_confidence = (
         top1 < config.OOD_CONFIDENCE_THRESHOLD
         or margin < config.OOD_MARGIN_THRESHOLD
     )
+
+    if face_info["dominant_face"]:
+        likely_out_of_scope = True
+        reason = "dominant_face"
+    elif texture_info["likely_plain_object"]:
+        likely_out_of_scope = True
+        reason = "plain_object"
+    elif low_confidence:
+        likely_out_of_scope = True
+        reason = "low_confidence"
+    else:
+        likely_out_of_scope = False
+        reason = None
 
     return {
         "pred_class_key": pred_class_key,
@@ -169,4 +337,7 @@ def predict(model, mapping, image: Image.Image):
         "all_probabilities": all_probs,
         "margin": margin,
         "likely_out_of_scope": likely_out_of_scope,
+        "reason": reason,
+        "face_info": face_info,
+        "texture_info": texture_info,
     }

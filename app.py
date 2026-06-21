@@ -26,25 +26,6 @@ styling.inject_global_css()
 
 
 # ─────────────────────────────────────────────────────────────────
-# SIDEBAR (tetap dipertahankan untuk navigasi multipage Streamlit,
-# meski secara visual navbar atas jadi fokus utama)
-# ─────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("### Tari Jateng")
-    st.markdown(
-        '<span class="muted-text">Klasifikasi kostum tari tradisional '
-        "berbasis Deep Learning</span>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("---")
-    st.caption(
-        "Skripsi: *Pengembangan Model CNN Menggunakan Transfer Learning "
-        "untuk Klasifikasi Kostum Tari Tradisional Jawa Tengah*"
-    )
-    st.caption("Fasya Maulinada · Universitas Muria Kudus · 2025")
-
-
-# ─────────────────────────────────────────────────────────────────
 # NAVBAR
 # ─────────────────────────────────────────────────────────────────
 _switched = styling.render_navbar(active_page="Home")
@@ -102,6 +83,13 @@ if model_error:
         "menjelajahi halaman **Katalog** di menu sebelah kiri."
     )
     st.stop()
+
+# Muat detektor wajah untuk fitur anti-selfie. Jika gagal dimuat
+# (misal opencv belum terinstall), JANGAN hentikan aplikasi -- cukup
+# lanjut tanpa fitur ini, klasifikasi utama tetap berjalan.
+face_detector, face_detector_error = model_loader.load_face_detector()
+if face_detector_error:
+    face_detector = None  # fallback aman, predict() akan skip cek wajah
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -171,7 +159,7 @@ with col_upload_center:
         if classify_clicked:
             with st.spinner("Menganalisis pola visual kostum..."):
                 time.sleep(0.4)  # jeda kecil agar transisi terasa, bukan instan
-                result = model_loader.predict(model, mapping, new_image)
+                result = model_loader.predict(model, mapping, new_image, face_detector=face_detector)
 
             st.session_state["last_result"] = result
             st.session_state["last_image_caption"] = new_image_name
@@ -191,34 +179,74 @@ if "last_result" in st.session_state:
     styling.eyebrow("Hasil Klasifikasi")
 
     if result.get("likely_out_of_scope"):
+        reason = result.get("reason")
+
+        if reason == "dominant_face":
+            title_text = "Gambar ini terdeteksi sebagai foto wajah/selfie, bukan kostum tari"
+            explanation_text = (
+                "Sistem mendeteksi adanya wajah yang dominan dalam foto ini. "
+                "Sistem ini dirancang khusus untuk mengenali <strong>kostum tari</strong>, "
+                "bukan wajah atau orang secara umum."
+            )
+            tebakan_note = (
+                f"Model tetap memberikan tebakan <strong>{pred_info.get('nama_tampilan', result['pred_label'])}</strong> "
+                f"(keyakinan {confidence:.1f}%), tapi ini diabaikan karena foto wajah/selfie "
+                "terdeteksi dalam gambar."
+            )
+            tips_text = (
+                "💡 Pastikan foto menampilkan kostum tari secara penuh dan jelas, "
+                "tanpa wajah close-up yang mendominasi bingkai foto."
+            )
+        elif reason == "plain_object":
+            title_text = "Gambar ini sepertinya bukan kostum tari (terdeteksi sebagai benda polos)"
+            explanation_text = (
+                "Sistem mendeteksi gambar ini kurang memiliki motif/warna khas kain "
+                "tradisional — kemungkinan ini foto benda sehari-hari (seperti botol, "
+                "piring, atau benda polos lainnya) yang permukaannya halus dan minim corak."
+            )
+            tebakan_note = (
+                f"Model tetap memberikan tebakan <strong>{pred_info.get('nama_tampilan', result['pred_label'])}</strong> "
+                f"(keyakinan {confidence:.1f}%), tapi ini diabaikan karena gambar tidak "
+                "menunjukkan ciri visual kain/kostum tari."
+            )
+            tips_text = (
+                "💡 Pastikan foto benar-benar menampilkan kostum tari dengan motif kain "
+                "yang terlihat jelas, bukan benda lain di sekitar."
+            )
+        else:
+            title_text = "Gambar ini sepertinya bukan salah satu dari 5 kostum tari yang dikenali sistem"
+            explanation_text = (
+                "Sistem ini hanya dilatih untuk mengenali lima kostum tari tradisional "
+                "Jawa Tengah: <strong>Tari Bedhaya, Tari Dolalak, Tari Gambyong, "
+                "Tari Golek, dan Tari Srimpi</strong>. Gambar yang kamu berikan tidak "
+                "cukup cocok dengan pola visual kelima kostum tersebut."
+            )
+            tebakan_note = (
+                f"Tebakan terdekat model: <strong>{pred_info.get('nama_tampilan', result['pred_label'])}</strong> "
+                f"(keyakinan hanya {confidence:.1f}%) — tapi ini kemungkinan besar tidak akurat."
+            )
+            tips_text = (
+                "💡 Coba unggah/foto ulang dengan gambar yang menampilkan dengan jelas "
+                "salah satu dari 5 kostum tari di atas, dari sudut yang lebih terlihat "
+                "dan pencahayaan yang cukup."
+            )
+
         # ── Gambar kemungkinan BUKAN salah satu dari 5 kostum tari ──
         st.markdown(
             f"""
             <div class="result-card" style="--accent-color:#A8456B;">
                 <div class="eyebrow" style="color:#A8456B;">⚠️ Gambar Tidak Sesuai</div>
                 <div class="pred-title" style="color:#A8456B; font-size:1.4rem;">
-                    Gambar ini kurang jelas atau bukan salah satu dari 5 kostum tari yang dikenali sistem
+                    {title_text}
                 </div>
-                <p style="margin-bottom:0.6rem;">
-                    Sistem ini hanya dilatih untuk mengenali lima kostum tari tradisional
-                    Jawa Tengah: <strong>Tari Bedhaya, Tari Dolalak, Tari Gambyong,
-                    Tari Golek, dan Tari Srimpi</strong>. Gambar yang kamu berikan tidak
-                    cukup cocok dengan pola visual kelima kostum tersebut.
-                </p>
-                <p class="muted-text" style="margin-bottom:0;">
-                    Tebakan terdekat model: <strong>{pred_info.get('nama_tampilan', result['pred_label'])}</strong>
-                    (keyakinan hanya {confidence:.1f}%) — tapi ini kemungkinan besar tidak akurat.
-                </p>
+                <p style="margin-bottom:0.6rem;">{explanation_text}</p>
+                <p class="muted-text" style="margin-bottom:0;">{tebakan_note}</p>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        st.info(
-            "💡 Coba unggah/foto ulang dengan gambar yang menampilkan dengan jelas "
-            "salah satu dari 5 kostum tari di atas, dari sudut yang lebih terlihat "
-            "dan pencahayaan yang cukup."
-        )
+        st.info(tips_text)
 
         if st.button("🔄 Coba Gambar Lain", use_container_width=True):
             del st.session_state["last_result"]
