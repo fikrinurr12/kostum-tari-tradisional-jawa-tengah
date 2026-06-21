@@ -16,6 +16,11 @@
 #   (disyaratkan langsung oleh tensorflow-cpu 2.20.0).
 # - Memakai `tensorflow-cpu` (bukan `tensorflow` penuh) karena Streamlit
 #   Cloud hanya menyediakan CPU.
+# - Memakai `opencv-python-headless` (BUKAN `opencv-python` biasa) untuk
+#   fitur deteksi wajah (anti-selfie pada klasifikasi). Versi headless
+#   tidak butuh library GUI/X11 (libGL, dll) yang tidak ada di server
+#   Streamlit Cloud -- pelajaran dari masalah serupa (mesa-vulkan-drivers)
+#   saat instalasi Chrome di proyek lain.
 #
 # CATATAN PENTING soal Python version:
 # - File `runtime.txt` TIDAK reliable dibaca otomatis oleh Streamlit
@@ -31,3 +36,4 @@ tensorflow-cpu==2.20.0
 numpy>=1.26.0
 pillow==10.3.0
 matplotlib>=3.8.0
+opencv-python-headless>=4.10.0

@@ -58,6 +58,19 @@ OOD_CONFIDENCE_THRESHOLD = 60.0  # % -- di bawah ini dianggap tidak sesuai
 OOD_MARGIN_THRESHOLD = 20.0      # % -- selisih top-1 vs top-2 harus signifikan
 
 # ─────────────────────────────────────────────────────────────────
+# DETEKSI WAJAH DOMINAN (anti-selfie)
+# ─────────────────────────────────────────────────────────────────
+# Model klasifikasi tetap bisa sangat "yakin" (>90%) terhadap foto
+# wajah/selfie yang sebenarnya sama sekali bukan kostum tari, karena
+# model hanya dilatih membedakan 5 kelas tari satu sama lain -- bukan
+# membedakan "kostum tari" vs "bukan kostum tari" secara umum. Sinyal
+# confidence/margin saja tidak cukup menangkap kasus ini (ditemukan
+# lewat pengujian langsung: foto selfie terdeteksi 98.6% sebagai
+# salah satu kostum tari). Deteksi wajah dipakai sebagai sinyal
+# TAMBAHAN yang independen dari confidence model.
+FACE_AREA_THRESHOLD = 0.12  # proporsi luas wajah/luas gambar dianggap "dominan"
+
+# ─────────────────────────────────────────────────────────────────
 # DATA KATALOG TARI
 # Konten dirangkum dari BAB II.2.2.1 proposal skripsi (Fasya Maulinada,
 # "Pengembangan Model CNN Menggunakan Transfer Learning untuk Klasifikasi
