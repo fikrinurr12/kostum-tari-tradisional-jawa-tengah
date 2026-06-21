@@ -54,7 +54,7 @@ FALLBACK_DATASET_TOTAL = 1335
 #
 # Gambar ditandai "kemungkinan tidak sesuai" jika MEMENUHI SALAH SATU
 # kondisi di bawah (OR) -- confidence rendah ATAU margin tipis.
-OOD_CONFIDENCE_THRESHOLD = 80.0  # % -- di bawah ini dianggap tidak sesuai
+OOD_CONFIDENCE_THRESHOLD = 70.0  # % -- di bawah ini dianggap tidak sesuai
 OOD_MARGIN_THRESHOLD = 20.0      # % -- selisih top-1 vs top-2 harus signifikan
 
 # ─────────────────────────────────────────────────────────────────
