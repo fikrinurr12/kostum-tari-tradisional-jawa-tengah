@@ -197,7 +197,7 @@ if "last_result" in st.session_state:
             <div class="result-card" style="--accent-color:#A8456B;">
                 <div class="eyebrow" style="color:#A8456B;">⚠️ Gambar Tidak Sesuai</div>
                 <div class="pred-title" style="color:#A8456B; font-size:1.4rem;">
-                    Gambar ini sepertinya bukan salah satu dari 5 kostum tari yang dikenali sistem
+                    Gambar ini kurang jelas atau bukan salah satu dari 5 kostum tari yang dikenali sistem
                 </div>
                 <p style="margin-bottom:0.6rem;">
                     Sistem ini hanya dilatih untuk mengenali lima kostum tari tradisional
