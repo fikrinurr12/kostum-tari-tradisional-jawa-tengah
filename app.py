@@ -104,15 +104,6 @@ with col_upload_center:
     new_image_name = None
 
     with tab_upload:
-        st.markdown(
-            '<p class="muted-text" style="text-align:center;">'
-            "💡 Di HP, tombol di bawah biasanya memberi pilihan "
-            '<strong>"Ambil Foto"</strong> yang langsung membuka aplikasi '
-            "kamera bawaan HP-mu (bukan kamera browser) — hasilnya jauh "
-            "lebih tajam dibanding tab \"Ambil Foto\" di sebelah."
-            "</p>",
-            unsafe_allow_html=True,
-        )
         uploaded_file = st.file_uploader(
             "Pilih gambar (JPG, JPEG, atau PNG)",
             type=["jpg", "jpeg", "png"],
