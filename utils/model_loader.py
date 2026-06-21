@@ -24,73 +24,6 @@ import config
 
 
 @st.cache_resource(show_spinner=False)
-def load_face_detector():
-    """
-    Memuat Haar Cascade classifier untuk deteksi wajah (bawaan OpenCV,
-    tidak perlu file model tambahan -- sudah ter-bundle di paket
-    opencv-python-headless itu sendiri).
-
-    Mengembalikan tuple (detector, error_message).
-    """
-    try:
-        import cv2
-    except ImportError as e:
-        return None, (
-            "OpenCV gagal diimpor. Pastikan `opencv-python-headless` "
-            f"tercantum di requirements.txt. Detail: {e}"
-        )
-
-    cascade_path = os.path.join(
-        cv2.data.haarcascades, "haarcascade_frontalface_default.xml"
-    )
-    detector = cv2.CascadeClassifier(cascade_path)
-
-    if detector.empty():
-        return None, "Gagal memuat file Haar Cascade untuk deteksi wajah."
-
-    return detector, None
-
-
-def detect_dominant_face(image: Image.Image, detector, area_threshold=None):
-    """
-    Mendeteksi apakah ada wajah yang DOMINAN (cukup besar relatif
-    terhadap ukuran gambar) di dalam foto -- indikasi kuat ini adalah
-    foto selfie/wajah, bukan foto kostum tari.
-
-    area_threshold: proporsi minimum (luas wajah / luas gambar) untuk
-    dianggap "dominan". Default diambil dari config.FACE_AREA_THRESHOLD
-    jika tidak diberikan secara eksplisit.
-
-    Mengembalikan dict: {'face_detected': bool, 'dominant_face': bool,
-                          'largest_face_ratio': float}
-    """
-    import cv2
-
-    if area_threshold is None:
-        area_threshold = config.FACE_AREA_THRESHOLD
-
-    img_array = np.array(image.convert("RGB"))
-    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-
-    faces = detector.detectMultiScale(
-        gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40)
-    )
-
-    if len(faces) == 0:
-        return {"face_detected": False, "dominant_face": False, "largest_face_ratio": 0.0}
-
-    image_area = gray.shape[0] * gray.shape[1]
-    largest_face_area = max(w * h for (x, y, w, h) in faces)
-    largest_face_ratio = largest_face_area / image_area
-
-    return {
-        "face_detected": True,
-        "dominant_face": largest_face_ratio >= area_threshold,
-        "largest_face_ratio": largest_face_ratio,
-    }
-
-
-@st.cache_resource(show_spinner=False)
 def load_class_mapping():
     """
     Memuat mapping kelas dari class_mapping.json yang dihasilkan notebook
@@ -177,7 +110,7 @@ def preprocess_image(image: Image.Image, target_size):
     return np.expand_dims(arr, axis=0)
 
 
-def predict(model, mapping, image: Image.Image, face_detector=None):
+def predict(model, mapping, image: Image.Image):
     """
     Menjalankan prediksi pada satu gambar.
 
@@ -191,7 +124,6 @@ def predict(model, mapping, image: Image.Image, face_detector=None):
         'likely_out_of_scope': False,          # True jika kemungkinan bukan
                                                 # salah satu dari 5 kelas yang
                                                 # dilatih (lihat config.py)
-        'reason'           : None / 'dominant_face' / 'low_confidence',
       }
     """
     img_size = mapping["img_size"]
@@ -215,42 +147,20 @@ def predict(model, mapping, image: Image.Image, face_detector=None):
     # Urutkan dari probabilitas tertinggi
     all_probs = dict(sorted(all_probs.items(), key=lambda x: x[1], reverse=True))
 
-    # ── Sinyal 1: deteksi wajah dominan (foto selfie/wajah) ───────
-    # Dijalankan & dicek LEBIH DULU karena ini sinyal yang independen
-    # dari confidence model -- model softmax tetap bisa sangat "yakin"
-    # (>90%) terhadap foto wajah yang sebenarnya sama sekali bukan
-    # kostum tari, karena ia hanya dilatih membedakan 5 kelas tari satu
-    # sama lain, bukan membedakan "tari" vs "bukan tari" secara umum.
-    face_info = {"face_detected": False, "dominant_face": False, "largest_face_ratio": 0.0}
-    if face_detector is not None:
-        try:
-            face_info = detect_dominant_face(image, face_detector)
-        except Exception:
-            # Jika deteksi wajah gagal karena alasan apapun (gambar
-            # korup, dll), JANGAN blokir prediksi utama -- lanjut
-            # dengan sinyal confidence/margin saja sebagai fallback.
-            pass
-
-    # ── Sinyal 2: confidence & margin (pendekatan sebelumnya) ─────
+    # ── Sinyal deteksi "kemungkinan di luar 5 kelas yang dilatih" ──
+    # Model softmax SELALU mengeluarkan total probabilitas 100% dibagi
+    # ke 5 kelas, walau gambarnya sama sekali bukan kostum tari (misal
+    # foto kucing) -- jadi tidak ada cara langsung model bilang "tidak
+    # tahu". Dua sinyal tidak langsung dipakai sebagai pendekatan:
     sorted_probs = list(all_probs.values())
     top1 = sorted_probs[0]
     top2 = sorted_probs[1] if len(sorted_probs) > 1 else 0.0
     margin = top1 - top2
 
-    low_confidence = (
+    likely_out_of_scope = (
         top1 < config.OOD_CONFIDENCE_THRESHOLD
         or margin < config.OOD_MARGIN_THRESHOLD
     )
-
-    if face_info["dominant_face"]:
-        likely_out_of_scope = True
-        reason = "dominant_face"
-    elif low_confidence:
-        likely_out_of_scope = True
-        reason = "low_confidence"
-    else:
-        likely_out_of_scope = False
-        reason = None
 
     return {
         "pred_class_key": pred_class_key,
@@ -259,6 +169,4 @@ def predict(model, mapping, image: Image.Image, face_detector=None):
         "all_probabilities": all_probs,
         "margin": margin,
         "likely_out_of_scope": likely_out_of_scope,
-        "reason": reason,
-        "face_info": face_info,
     }
