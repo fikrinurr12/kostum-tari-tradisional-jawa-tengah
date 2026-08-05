@@ -452,15 +452,12 @@ def render_navbar(active_page: str = "Home"):
     page_files = {
         "Home": "app.py",
         "Katalog": "pages/1_Katalog.py",
-        "Tentang ML": "pages/2_Tentang.py",
     }
     pages = list(page_files.keys())
 
     # Normalisasi: kalau dipanggil dengan "Tentang" (label lama),
     # tetap cocokkan ke "Tentang ML".
-    if active_page == "Tentang":
-        active_page = "Tentang ML"
-
+    
     col_brand, col_menu = st.columns([2, 3])
 
     with col_brand:

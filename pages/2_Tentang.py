@@ -83,7 +83,7 @@ def render_accuracy_chart(acc_history, val_acc_history=None):
     fig.tight_layout()
     return fig
 
-_switched = styling.render_navbar(active_page="Tentang ML")
+_switched = styling.render_navbar(active_page="Home")
 if _switched:
     st.stop()
 
