@@ -1,16 +1,13 @@
 """
-utils/model_loader.py
-Modul untuk memuat model klasifikasi dan menjalankan prediksi.
+utils/model_loader.py  —  TariJateng
+Memuat model klasifikasi CNN MobileNetV2 dan menjalankan prediksi.
 
-Catatan penting kompatibilitas deployment:
-- Model dimuat dengan compile=False karena untuk inferensi saja kita
-  tidak butuh optimizer/loss/metrics ter-reattach. Ini juga menghindari
-  error langka terkait custom metric objects (mis. keras.metrics.Precision
-  dengan nama custom) yang kadang gagal di-deserialize otomatis saat
-  versi TensorFlow runtime sedikit berbeda dari versi training.
-- st.cache_resource memastikan model hanya dimuat sekali per sesi server,
-  bukan setiap kali pengguna upload gambar (penting untuk kecepatan &
-  memori di Streamlit Cloud free tier).
+Deteksi gambar di luar cakupan menggunakan metode Maximum Softmax
+Probability (MSP): dua sinyal dari output softmax model (confidence
+dan margin) digunakan sebagai indikator apakah gambar kemungkinan
+bukan salah satu dari 5 kostum tari yang dilatihkan. Pendekatan ini
+tidak memerlukan model atau library tambahan selain TensorFlow/Keras
+yang sudah digunakan untuk klasifikasi utama.
 """
 
 import json
@@ -24,320 +21,126 @@ import config
 
 
 @st.cache_resource(show_spinner=False)
-def load_face_detector():
-    """
-    Memuat Haar Cascade classifier untuk deteksi wajah (bawaan OpenCV,
-    tidak perlu file model tambahan -- sudah ter-bundle di paket
-    opencv-python-headless itu sendiri).
-
-    Mengembalikan tuple (detector, error_message).
-    """
-    try:
-        import cv2
-    except ImportError as e:
-        return None, (
-            "OpenCV gagal diimpor. Pastikan `opencv-python-headless` "
-            f"tercantum di requirements.txt. Detail: {e}"
-        )
-
-    cascade_path = os.path.join(
-        cv2.data.haarcascades, "haarcascade_frontalface_default.xml"
-    )
-    detector = cv2.CascadeClassifier(cascade_path)
-
-    if detector.empty():
-        return None, "Gagal memuat file Haar Cascade untuk deteksi wajah."
-
-    return detector, None
-
-
-def detect_dominant_face(image: Image.Image, detector, area_threshold=None):
-    """
-    Mendeteksi apakah ada wajah yang DOMINAN (cukup besar relatif
-    terhadap ukuran gambar) di dalam foto -- indikasi kuat ini adalah
-    foto selfie/wajah, bukan foto kostum tari.
-
-    area_threshold: proporsi minimum (luas wajah / luas gambar) untuk
-    dianggap "dominan". Default diambil dari config.FACE_AREA_THRESHOLD
-    jika tidak diberikan secara eksplisit.
-
-    Mengembalikan dict: {'face_detected': bool, 'dominant_face': bool,
-                          'largest_face_ratio': float}
-    """
-    import cv2
-
-    if area_threshold is None:
-        area_threshold = config.FACE_AREA_THRESHOLD
-
-    img_array = np.array(image.convert("RGB"))
-    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-
-    faces = detector.detectMultiScale(
-        gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40)
-    )
-
-    if len(faces) == 0:
-        return {"face_detected": False, "dominant_face": False, "largest_face_ratio": 0.0}
-
-    image_area = gray.shape[0] * gray.shape[1]
-    largest_face_area = max(w * h for (x, y, w, h) in faces)
-    largest_face_ratio = largest_face_area / image_area
-
-    return {
-        "face_detected": True,
-        "dominant_face": largest_face_ratio >= area_threshold,
-        "largest_face_ratio": largest_face_ratio,
-    }
-
-
-def analyze_image_texture(image: Image.Image):
-    """
-    Menganalisis kompleksitas visual gambar secara sederhana (BUKAN
-    deteksi objek/klasifikasi machine learning, hanya pengukuran fitur
-    citra dasar) untuk membantu menyaring foto yang kemungkinan bukan
-    kostum tari -- misalnya benda polos seperti botol, piring, atau
-    lampu yang permukaannya cenderung halus dan warnanya terbatas,
-    berbeda dari kain/kostum tari yang biasanya kaya motif dan warna.
-
-    Tiga sinyal yang dihitung:
-      1. edge_density   : kepadatan tepi (deteksi Canny). Kain bermotif
-         batik/tradisional cenderung punya banyak tepi kompleks;
-         permukaan benda polos (kaca, keramik, logam) jauh lebih sedikit.
-      2. color_diversity: jumlah warna dominan unik (lewat kuantisasi
-         histogram HSV). Kostum tari biasanya multi-warna (motif kain,
-         aksesori); benda sehari-hari sering didominasi 1-2 warna saja.
-      3. saturation_mean: rata-rata saturasi warna. Kain tradisional
-         umumnya saturasi tinggi (warna mencolok khas batik/tenun).
-
-    PENTING -- ini heuristik sederhana, BUKAN model machine learning,
-    dan tidak selalu akurat 100%. Dipakai sebagai SINYAL TAMBAHAN saja,
-    dikombinasikan dengan sinyal confidence/margin yang sudah ada.
-
-    Mengembalikan dict: {'edge_density': float, 'color_diversity': int,
-                          'saturation_mean': float, 'likely_plain_object': bool}
-    """
-    import cv2
-
-    img_array = np.array(image.convert("RGB"))
-    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-    hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
-
-    # ── 1. Edge density (kepadatan tepi via Canny) ──────────────
-    edges = cv2.Canny(gray, threshold1=50, threshold2=150)
-    edge_density = float(np.count_nonzero(edges)) / edges.size
-
-    # ── 2. Color diversity (jumlah "bin" warna dominan di histogram H) ──
-    hist_h = cv2.calcHist([hsv], [0], None, [32], [0, 180])
-    hist_h_norm = hist_h / (hist_h.sum() + 1e-6)
-    # Hitung berapa banyak bin yang punya proporsi signifikan (>2%)
-    color_diversity = int(np.count_nonzero(hist_h_norm > 0.02))
-
-    # ── 3. Saturation mean (rata-rata saturasi warna) ───────────
-    saturation_mean = float(hsv[:, :, 1].mean())
-
-    # ── Gabungkan jadi satu sinyal "kemungkinan benda polos" ────
-    # Ketiga kondisi berikut umum pada benda sehari-hari yang halus/
-    # monokrom (botol kaca, piring keramik putih, lampu, dsb):
-    likely_plain_object = (
-        edge_density < config.PLAIN_OBJECT_EDGE_THRESHOLD
-        and color_diversity < config.PLAIN_OBJECT_COLOR_THRESHOLD
-        and saturation_mean < config.PLAIN_OBJECT_SATURATION_THRESHOLD
-    )
-
-    return {
-        "edge_density": edge_density,
-        "color_diversity": color_diversity,
-        "saturation_mean": saturation_mean,
-        "likely_plain_object": likely_plain_object,
-    }
-
-
-@st.cache_resource(show_spinner=False)
 def load_class_mapping():
-    """
-    Memuat mapping kelas dari class_mapping.json yang dihasilkan notebook
-    training. Mengembalikan dict dengan key: idx_to_class, class_names,
-    class_labels, img_size.
-    """
+    """Memuat pemetaan indeks kelas dari file JSON."""
     if not os.path.exists(config.CLASS_MAPPING_PATH):
         return None
-
-    with open(config.CLASS_MAPPING_PATH, "r", encoding="utf-8") as f:
-        mapping = json.load(f)
-
-    # idx_to_class disimpan dengan key string angka ("0", "1", ...) karena
-    # JSON tidak mendukung integer sebagai key — konversi balik ke int.
-    idx_to_class_raw = mapping.get("idx_to_class", {})
-    idx_to_class = {int(k): v for k, v in idx_to_class_raw.items()}
-
-    return {
-        "idx_to_class": idx_to_class,
-        "class_names": mapping.get("class_names", config.CLASS_ORDER),
-        "class_labels": mapping.get("class_labels", {}),
-        "img_size": tuple(mapping.get("img_size", list(config.IMG_SIZE))),
-    }
+    try:
+        with open(config.CLASS_MAPPING_PATH, "r") as f:
+            return json.load(f)
+    except Exception:
+        return None
 
 
 @st.cache_resource(show_spinner=False)
 def load_model():
     """
-    Memuat model Keras untuk inferensi.
-    Mencoba .h5 dahulu (lebih portable antar versi TF minor), lalu
-    fallback ke .keras jika .h5 tidak ditemukan.
+    Memuat model CNN MobileNetV2 dari file .h5 atau .keras.
 
-    Mengembalikan tuple (model, error_message). Jika error_message bukan
-    None, model bernilai None dan pesan error siap ditampilkan ke user.
+    st.cache_resource memastikan model hanya dimuat sekali per sesi
+    server, bukan setiap kali pengguna mengunggah gambar baru —
+    penting untuk efisiensi memori dan kecepatan respons di environment
+    hosting dengan sumber daya terbatas (Railway/Streamlit Cloud).
+
+    compile=False digunakan karena untuk inferensi tidak dibutuhkan
+    optimizer/loss/metrics, dan menghindari error deserializasi custom
+    metric objects antar versi TensorFlow.
     """
-    # Import TensorFlow di dalam fungsi (bukan di top-level module) agar
-    # error import tidak langsung meledak saat module di-import — bisa
-    # ditangani dengan pesan yang ramah di UI.
     try:
         import tensorflow as tf
-    except ImportError as e:
-        return None, (
-            "TensorFlow gagal diimpor. Pastikan `tensorflow-cpu` "
-            f"tercantum di requirements.txt. Detail: {e}"
-        )
-
-    model_path = None
-    if os.path.exists(config.MODEL_PATH):
-        model_path = config.MODEL_PATH
-    elif os.path.exists(config.MODEL_PATH_KERAS):
-        model_path = config.MODEL_PATH_KERAS
-
-    if model_path is None:
-        return None, (
-            "File model tidak ditemukan di folder `models/`. "
-            "Pastikan `model_final.h5` (atau `model_final.keras`) sudah "
-            "diunggah ke folder models/ pada repository."
-        )
-
-    try:
-        model = tf.keras.models.load_model(model_path, compile=False)
-        return model, None
+        if os.path.exists(config.MODEL_PATH):
+            model = tf.keras.models.load_model(config.MODEL_PATH, compile=False)
+            return model, None
+        elif os.path.exists(config.MODEL_PATH_KERAS):
+            model = tf.keras.models.load_model(config.MODEL_PATH_KERAS, compile=False)
+            return model, None
+        else:
+            return None, (
+                "File model tidak ditemukan. Pastikan `model_final.h5` "
+                "atau `model_final.keras` tersedia di folder `models/`."
+            )
     except Exception as e:
-        return None, (
-            f"Gagal memuat model dari `{os.path.basename(model_path)}`. "
-            f"Detail teknis: {e}"
-        )
+        return None, f"Gagal memuat model: {str(e)}"
 
 
-def preprocess_image(image: Image.Image, target_size):
+def predict(model, mapping, image: Image.Image) -> dict:
     """
-    Mengubah gambar PIL menjadi array siap pakai untuk MobileNetV2.
-    Preprocessing harus identik dengan preprocess_input MobileNetV2
-    yang dipakai saat training (skala piksel ke rentang [-1, 1]).
+    Melakukan prediksi kelas kostum tari dari objek PIL.Image.
+
+    Pipeline:
+      1. Preprocessing: resize ke 224×224 px, preprocess_input MobileNetV2
+         (normalisasi ke rentang [-1, 1] sesuai spesifikasi arsitektur).
+      2. Inferensi: model.predict() menghasilkan vektor probabilitas softmax
+         untuk 5 kelas (output berukuran [1, 5]).
+      3. Deteksi OOD: dua sinyal dari output softmax:
+           a. confidence = max(probabilitas)  → rendah = model tidak yakin
+           b. margin = prob_top1 - prob_top2  → kecil = model tidak dapat membedakan
+         Gambar ditandai OOD jika salah satu sinyal di bawah threshold
+         (logika OR — lihat config.py untuk penjelasan lengkap).
+
+    Returns:
+        dict dengan kunci:
+          pred_class_key       : str  — key kelas prediksi
+          pred_label           : str  — nama tampilan kelas prediksi
+          confidence           : float — probabilitas kelas teratas (%)
+          margin               : float — selisih top-1 vs top-2 (%)
+          all_probabilities    : dict  — {class_key: prob%} semua kelas
+          likely_out_of_scope  : bool  — True jika gambar diduga di luar cakupan
+          reason               : str  — "low_confidence", "low_margin", atau
+                                         "low_confidence_and_margin"
     """
-    image = image.convert("RGB").resize(target_size)
-    arr = np.array(image).astype(np.float32)
-
-    # Setara tf.keras.applications.mobilenet_v2.preprocess_input
-    # (scaling manual ditulis langsung agar tidak perlu import berat
-    # 'applications' module hanya untuk satu fungsi ini).
-    arr = (arr / 127.5) - 1.0
-
-    return np.expand_dims(arr, axis=0)
-
-
-def predict(model, mapping, image: Image.Image, face_detector=None):
-    """
-    Menjalankan prediksi pada satu gambar.
-
-    Mengembalikan dict:
-      {
-        'pred_class_key'   : 'Tari_Bedhaya',   # key internal (folder/JSON)
-        'pred_label'       : 'Tari Bedhaya',   # label tampilan
-        'confidence'       : 92.4,             # persen
-        'all_probabilities': {key: persen, ...}  # semua kelas, terurut desc
-        'margin'           : 78.1,             # selisih top-1 vs top-2 (persen)
-        'likely_out_of_scope': False,          # True jika kemungkinan bukan
-                                                # salah satu dari 5 kelas yang
-                                                # dilatih (lihat config.py)
-        'reason'           : None / 'dominant_face' / 'low_confidence',
-      }
-    """
-    img_size = mapping["img_size"]
-    arr = preprocess_image(image, img_size)
-
-    probs = model.predict(arr, verbose=0)[0]
-    pred_idx = int(np.argmax(probs))
-
-    idx_to_class = mapping["idx_to_class"]
-    class_labels = mapping["class_labels"]
-
-    pred_class_key = idx_to_class.get(pred_idx, config.CLASS_ORDER[pred_idx])
-    pred_label = class_labels.get(pred_class_key, pred_class_key.replace("_", " "))
-    confidence = float(probs[pred_idx]) * 100
-
-    all_probs = {}
-    for idx, prob in enumerate(probs):
-        class_key = idx_to_class.get(idx, config.CLASS_ORDER[idx] if idx < len(config.CLASS_ORDER) else str(idx))
-        all_probs[class_key] = float(prob) * 100
-
-    # Urutkan dari probabilitas tertinggi
-    all_probs = dict(sorted(all_probs.items(), key=lambda x: x[1], reverse=True))
-
-    # ── Sinyal 1: deteksi wajah dominan (foto selfie/wajah) ───────
-    # Dijalankan & dicek LEBIH DULU karena ini sinyal yang independen
-    # dari confidence model -- model softmax tetap bisa sangat "yakin"
-    # (>90%) terhadap foto wajah yang sebenarnya sama sekali bukan
-    # kostum tari, karena ia hanya dilatih membedakan 5 kelas tari satu
-    # sama lain, bukan membedakan "tari" vs "bukan tari" secara umum.
-    face_info = {"face_detected": False, "dominant_face": False, "largest_face_ratio": 0.0}
-    if face_detector is not None:
-        try:
-            face_info = detect_dominant_face(image, face_detector)
-        except Exception:
-            # Jika deteksi wajah gagal karena alasan apapun (gambar
-            # korup, dll), JANGAN blokir prediksi utama -- lanjut
-            # dengan sinyal confidence/margin saja sebagai fallback.
-            pass
-
-    # ── Sinyal 2: kompleksitas tekstur/warna (benda polos) ────────
-    # Dijalankan independen dari confidence model, untuk menangkap
-    # benda sehari-hari (botol, piring, lampu, dsb) yang permukaannya
-    # polos/halus -- model klasifikasi tetap bisa "yakin" terhadap
-    # benda-benda ini karena hanya dilatih membedakan 5 kelas tari.
-    texture_info = {"edge_density": 0.0, "color_diversity": 0, "saturation_mean": 0.0, "likely_plain_object": False}
+    # ── 1. Import preprocessing function ─────────────────────────
     try:
-        texture_info = analyze_image_texture(image)
-    except Exception:
-        # Jika analisis gagal karena alasan apapun, JANGAN blokir
-        # prediksi utama -- lanjut dengan sinyal lain sebagai fallback.
-        pass
+        from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+    except ImportError:
+        from keras.applications.mobilenet_v2 import preprocess_input
 
-    # ── Sinyal 3: confidence & margin (pendekatan sebelumnya) ─────
-    sorted_probs = list(all_probs.values())
-    top1 = sorted_probs[0]
-    top2 = sorted_probs[1] if len(sorted_probs) > 1 else 0.0
-    margin = top1 - top2
+    # ── 2. Preprocessing ─────────────────────────────────────────
+    img = image.convert("RGB").resize(config.IMG_SIZE)
+    arr = np.array(img, dtype=np.float32)
+    arr = preprocess_input(arr)                # → rentang [-1, 1]
+    arr = np.expand_dims(arr, axis=0)          # → shape (1, 224, 224, 3)
 
-    low_confidence = (
-        top1 < config.OOD_CONFIDENCE_THRESHOLD
-        or margin < config.OOD_MARGIN_THRESHOLD
-    )
+    # ── 3. Inferensi ─────────────────────────────────────────────
+    preds = model.predict(arr, verbose=0)[0]   # → shape (5,)
 
-    if face_info["dominant_face"]:
-        likely_out_of_scope = True
-        reason = "dominant_face"
-    elif texture_info["likely_plain_object"]:
-        likely_out_of_scope = True
-        reason = "plain_object"
-    elif low_confidence:
-        likely_out_of_scope = True
+    # ── 4. Susun probabilitas per kelas ──────────────────────────
+    idx_to_class = {int(k): v for k, v in mapping["idx_to_class"].items()}
+    all_probs = {
+        idx_to_class[i]: float(preds[i]) * 100
+        for i in range(len(preds))
+    }
+
+    # ── 5. Hitung confidence dan margin ──────────────────────────
+    sorted_probs = sorted(all_probs.values(), reverse=True)
+    confidence   = sorted_probs[0]
+    margin       = sorted_probs[0] - sorted_probs[1]
+    pred_key     = max(all_probs, key=all_probs.get)
+
+    # ── 6. Deteksi OOD via MSP + margin (logika OR) ──────────────
+    conf_fail   = confidence < config.OOD_CONFIDENCE_THRESHOLD
+    margin_fail = margin     < config.OOD_MARGIN_THRESHOLD
+    likely_ood  = conf_fail or margin_fail
+
+    if conf_fail and margin_fail:
+        reason = "low_confidence_and_margin"
+    elif conf_fail:
         reason = "low_confidence"
+    elif margin_fail:
+        reason = "low_margin"
     else:
-        likely_out_of_scope = False
         reason = None
 
+    # ── 7. Susun label prediksi ───────────────────────────────────
+    class_labels = mapping.get("class_labels", {})
+    pred_label   = class_labels.get(pred_key, pred_key.replace("_", " "))
+
     return {
-        "pred_class_key": pred_class_key,
-        "pred_label": pred_label,
-        "confidence": confidence,
-        "all_probabilities": all_probs,
-        "margin": margin,
-        "likely_out_of_scope": likely_out_of_scope,
-        "reason": reason,
-        "face_info": face_info,
-        "texture_info": texture_info,
+        "pred_class_key"    : pred_key,
+        "pred_label"        : pred_label,
+        "confidence"        : confidence,
+        "margin"            : margin,
+        "all_probabilities" : all_probs,
+        "likely_out_of_scope": likely_ood,
+        "reason"            : reason,
     }
