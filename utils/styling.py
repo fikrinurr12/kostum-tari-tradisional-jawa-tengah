@@ -300,7 +300,68 @@ def inject_global_css():
         /* ── Tombol deploy/manage app (pojok kiri bawah) ────────── */
         [data-testid="manage-app-button"] {{display: none !important;}}
         .stAppDeployButton {{display: none !important;}}
+        
+        /* ── Kurangi gap di atas navbar ──────────────────────────── */
+        [data-testid="block-container"] {{
+            padding-top: 1.5rem !important;
+            padding-bottom: 2rem !important;
+        }}
 
+        /* ── Sembunyikan icon link anchor di samping heading ─────── */
+        [data-testid="stHeadingAnchorLink"] {{display: none !important;}}
+        h1 a, h2 a, h3 a {{display: none !important;}}
+
+        /* ── Spinner jadi popup overlay saat loading ─────────────── */
+        div.stSpinner {{
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(255, 255, 255, 0.88) !important;
+            backdrop-filter: blur(5px) !important;
+            -webkit-backdrop-filter: blur(5px) !important;
+            z-index: 9998 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }}
+        div.stSpinner > div {{
+            background: white !important;
+            padding: 2.5rem 3.5rem !important;
+            border-radius: 20px !important;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.13) !important;
+            text-align: center !important;
+            min-width: 280px !important;
+        }}
+        div.stSpinner > div > div {{
+            margin: 0 auto 1rem auto !important;
+        }}
+
+        /* ── Kartu katalog: paksa tinggi sama dalam satu baris ───── */
+        [data-testid="stHorizontalBlock"] {{
+            align-items: stretch !important;
+        }}
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
+            display: flex !important;
+            flex-direction: column !important;
+        }}
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div:first-child {{
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }}
+
+        /* Paksa semua gambar katalog proporsi seragam 4:3 */
+        [data-testid="stImage"] img {{
+            object-fit: cover !important;
+            aspect-ratio: 4 / 3 !important;
+            width: 100% !important;
+            border-radius: 8px !important;
+        }}
+        
         /* ── Upload box & camera kustom (gaya kartu terpusat) ──── */
         [data-testid="stFileUploader"], [data-testid="stCameraInput"] {{
             background-color: {COLORS['paper_alt']};
