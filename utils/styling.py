@@ -288,6 +288,19 @@ def inject_global_css():
         footer {{visibility: hidden;}}
         header[data-testid="stHeader"] {{background-color: transparent;}}
 
+        /* ── Fork + GitHub icon (pojok kanan atas) ─────────────── */
+        [data-testid="stToolbar"] {{display: none !important;}}
+        .stAppToolbar {{display: none !important;}}
+
+        /* ── Watermark Streamlit (pojok kanan bawah) ────────────── */
+        [data-testid="stDecoration"] {{display: none !important;}}
+        .viewerBadge_container__1QSob {{display: none !important;}}
+        .viewerBadge_link {{display: none !important;}}
+
+        /* ── Tombol deploy/manage app (pojok kiri bawah) ────────── */
+        [data-testid="manage-app-button"] {{display: none !important;}}
+        .stAppDeployButton {{display: none !important;}}
+
         /* ── Upload box & camera kustom (gaya kartu terpusat) ──── */
         [data-testid="stFileUploader"], [data-testid="stCameraInput"] {{
             background-color: {COLORS['paper_alt']};
