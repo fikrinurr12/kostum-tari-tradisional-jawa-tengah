@@ -49,8 +49,8 @@ CONFIDENCE_THRESHOLD   = 40.0   # %
 # Threshold ditentukan empiris dari distribusi confidence score
 # pada data uji (nilai percentile ke-5 data kostum asli yang benar).
 # ─────────────────────────────────────────────────────────────────
-OOD_CONFIDENCE_THRESHOLD = 60.0   # % — di bawah ini dianggap tidak sesuai
-OOD_MARGIN_THRESHOLD     = 15.0   # % — selisih top-1 vs top-2 minimum
+OOD_CONFIDENCE_THRESHOLD = 10.0   # % — di bawah ini dianggap tidak sesuai
+OOD_MARGIN_THRESHOLD     = 1.0   # % — selisih top-1 vs top-2 minimum
 
 # ── DATA KATALOG TARI ─────────────────────────────────────────────
 DANCE_CATALOG = {
