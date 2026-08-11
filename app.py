@@ -72,23 +72,43 @@ if model_error:
 _, col_upload_center, _ = st.columns([0.3, 1.4, 0.3])
 
 with col_upload_center:
-    # Petunjuk khusus pengguna HP
-    st.markdown(
-        '<p class="muted-text" style="text-align:center; margin-bottom:0.6rem;">'
-        "📱 <strong>Pengguna HP:</strong> klik <em>Browse files</em> → pilih "
-        "<em>Ambil Foto</em> untuk foto langsung dari kamera asli perangkatmu.</p>",
-        unsafe_allow_html=True,
+    mode = st.radio(
+        "Sumber gambar",
+        options=["📁 Upload dari Galeri", "📷 Ambil Foto (Kamera)"],
+        horizontal=True,
+        label_visibility="collapsed",
+        key="input_mode_radio",
     )
 
-    uploaded_file = st.file_uploader(
-        "Pilih gambar",
-        type=["jpg", "jpeg", "png"],
-        label_visibility="collapsed",
-        key="file_uploader_widget",
-    )
+    uploaded_file = None
+    source_name = None
+
+    if mode == "📁 Upload dari Galeri":
+        uploaded_file = st.file_uploader(
+            "Pilih gambar",
+            type=["jpg", "jpeg", "png"],
+            label_visibility="collapsed",
+            key="file_uploader_widget",
+        )
+        if uploaded_file is not None:
+            source_name = uploaded_file.name
+    else:
+        st.markdown(
+            '<p class="muted-text" style="text-align:center; margin-bottom:0.6rem;">'
+            "Izinkan akses kamera saat browser memintanya, lalu tekan tombol "
+            "<em>Take Photo</em>.</p>",
+            unsafe_allow_html=True,
+        )
+        uploaded_file = st.camera_input(
+            "Ambil foto",
+            label_visibility="collapsed",
+            key="camera_input_widget",
+        )
+        if uploaded_file is not None:
+            source_name = "Foto Kamera"
 
     if uploaded_file is not None:
-        file_key = f"{uploaded_file.name}_{uploaded_file.size}"
+        file_key = f"{mode}_{uploaded_file.name}_{uploaded_file.size}"
 
         try:
             image = Image.open(uploaded_file)
@@ -97,7 +117,8 @@ with col_upload_center:
             image = None
 
         if image is not None:
-            st.image(image, caption=f"📁 {uploaded_file.name}", use_column_width=True)
+            if mode == "📁 Upload dari Galeri":
+                st.image(image, caption=f"📁 {source_name}", use_column_width=True)
 
             # ── Auto-klasifikasi jika file baru ──────────────────
             if st.session_state.get("_last_file_key") != file_key:
@@ -105,7 +126,7 @@ with col_upload_center:
                 with st.spinner("🎭 Menganalisis pola visual kostum tari..."):
                     result = model_loader.predict(model, mapping, image)
                 st.session_state["last_result"] = result
-                st.session_state["last_image_caption"] = uploaded_file.name
+                st.session_state["last_image_caption"] = source_name
                 st.rerun()
 
     else:
