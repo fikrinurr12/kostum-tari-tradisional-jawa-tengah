@@ -283,23 +283,69 @@ def inject_global_css():
             margin: 2rem 0;
         }}
 
-        /* ── Sembunyikan elemen default Streamlit yang kurang perlu */
-        #MainMenu {{visibility: hidden;}}
-        footer {{visibility: hidden;}}
-        header[data-testid="stHeader"] {{background-color: transparent;}}
+        /* =========================================================
+           HILANGKAN SELURUH UI BAWAAN STREAMLIT
+           ========================================================= */
 
-        /* ── Fork + GitHub icon (pojok kanan atas) ─────────────── */
-        [data-testid="stToolbar"] {{display: none !important;}}
-        .stAppToolbar {{display: none !important;}}
+        /* Toolbar kanan atas */
+        [data-testid="stToolbar"],
+        [data-testid="stToolbarActions"],
+        .stAppToolbar,
+        div[class*="stToolbar"],
+        div[class*="stAppToolbar"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
 
-        /* ── Watermark Streamlit (pojok kanan bawah) ────────────── */
-        [data-testid="stDecoration"] {{display: none !important;}}
-        .viewerBadge_container__1QSob {{display: none !important;}}
-        .viewerBadge_link {{display: none !important;}}
+        /* Tombol GitHub / Fork / Share / menu kanan atas */
+        [data-testid="stHeaderActionElements"],
+        [data-testid="stHeaderActionElements"] *,
+        button[kind="header"],
+        header button {
+            display: none !important;
+        }
 
-        /* ── Tombol deploy/manage app (pojok kiri bawah) ────────── */
-        [data-testid="manage-app-button"] {{display: none !important;}}
-        .stAppDeployButton {{display: none !important;}}
+        /* Watermark / viewer badge Streamlit */
+        [data-testid="stDecoration"],
+        .viewerBadge_container__1QSob,
+        .viewerBadge_link,
+        .viewerBadge_container,
+        .viewerBadge {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+
+        /* Tombol Deploy / Manage App */
+        [data-testid="manage-app-button"],
+        .stAppDeployButton,
+        button[title*="Deploy"],
+        button[title*="Manage"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        /* Header Streamlit */
+        header[data-testid="stHeader"] {
+            background: transparent !important;
+            display: none !important;
+        }
+
+        /* Menu hamburger / Main Menu */
+        #MainMenu {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        /* Footer bawaan Streamlit */
+        footer {
+            display: none !important;
+            visibility: hidden !important;
+        }															
         
         /* ── Kurangi gap di atas navbar ──────────────────────────── */
         [data-testid="block-container"] {{
