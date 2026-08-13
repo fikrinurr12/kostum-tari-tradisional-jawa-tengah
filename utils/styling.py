@@ -498,6 +498,39 @@ def inject_global_css():
             color: {COLORS['ink_soft']};
             font-size: 0.85rem;
         }}
+        
+        /* =========================================================
+   STREAMLIT UI CLEANUP
+   ========================================================= */
+
+header,
+footer,
+#MainMenu {
+    display: none !important;
+}
+
+[data-testid="stToolbar"],
+[data-testid="stToolbarActions"],
+[data-testid="stDecoration"],
+[data-testid="stHeaderActionElements"],
+[data-testid="manage-app-button"],
+.stAppToolbar,
+.stAppDeployButton,
+.viewerBadge_container__1QSob,
+.viewerBadge_link {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+[data-testid="stAppViewContainer"] {
+    margin-top: 0 !important;
+}
+
+[data-testid="block-container"] {
+    padding-top: 1.5rem !important;
+}
         </style>
         """,
         unsafe_allow_html=True,
