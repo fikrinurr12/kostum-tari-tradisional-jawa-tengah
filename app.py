@@ -72,84 +72,50 @@ if model_error:
     st.info("Kamu tetap bisa menjelajahi halaman **Katalog** di menu atas.")
     st.stop()
 
-# ─────────────────────────────────────────────────────────────────
-# BAGIAN UPLOAD & KLASIFIKASI -- dibungkus kartu terpusat
-# ─────────────────────────────────────────────────────────────────
-col_upload_l, col_upload_center, col_upload_r = st.columns([0.3, 1.4, 0.3])
+# ── UPLOAD & KLASIFIKASI ──────────────────────────────────────────
+_, col_upload_center, _ = st.columns([0.3, 1.4, 0.3])
 
 with col_upload_center:
-    tab_upload, tab_camera = st.tabs(["📁 Unggah Gambar", "📷 Ambil Foto"])
+    # Petunjuk khusus pengguna HP
+    st.markdown(
+        '<p class="muted-text" style="text-align:center; margin-bottom:0.6rem;">'
+        "📱 <strong>Pengguna HP:</strong> klik <em>Browse files</em> → pilih "
+        "<em>Ambil Foto</em> untuk foto langsung dari kamera asli perangkatmu.</p>",
+        unsafe_allow_html=True,
+    )
 
-    new_image = None
-    new_image_name = None
+    uploaded_file = st.file_uploader(
+        "Pilih gambar",
+        type=["jpg", "jpeg", "png"],
+        label_visibility="collapsed",
+        key="file_uploader_widget",
+    )
 
-    with tab_upload:
-        uploaded_file = st.file_uploader(
-            "Pilih gambar (JPG, JPEG, atau PNG)",
-            type=["jpg", "jpeg", "png"],
-            label_visibility="collapsed",
-            key="file_uploader_widget",
-        )
+    if uploaded_file is not None:
+        file_key = f"{uploaded_file.name}_{uploaded_file.size}"
 
-        if uploaded_file is not None:
-            try:
-                preview_img = Image.open(uploaded_file)
-            except Exception:
-                st.error("⚠️ Gambar tidak bisa dibuka. Coba unggah file gambar lain.")
-                preview_img = None
+        try:
+            image = Image.open(uploaded_file)
+        except Exception:
+            st.error("⚠️ Gambar tidak bisa dibuka. Coba file lain.")
+            image = None
 
-            if preview_img is not None:
-                st.image(preview_img, caption="Pratinjau gambar yang diunggah")
-                new_image = preview_img
-                new_image_name = uploaded_file.name
+        if image is not None:
+            st.image(image, caption=f"📁 {uploaded_file.name}", use_column_width=True)
 
-    with tab_camera:
-        st.markdown(
-            '<p class="muted-text" style="text-align:center;">Izinkan akses kamera '
-            "saat browser meminta, lalu arahkan kamera ke kostum tari dan tekan "
-            "tombol ambil foto.</p>",
-            unsafe_allow_html=True,
-        )
-        st.info(
-            "⚠️ Kamera di sini memakai kamera browser, sehingga resolusinya "
-            "lebih rendah dan kurang tajam dibanding kamera HP biasa. Untuk "
-            "hasil terbaik, gunakan tab **📁 Unggah Gambar** lalu pilih opsi "
-            '"Ambil Foto" yang membuka aplikasi kamera asli HP-mu.'
-        )
-        camera_file = st.camera_input(
-            "Ambil foto kostum tari",
-            label_visibility="collapsed",
-            key="camera_input_widget",
-        )
+            # ── Auto-klasifikasi jika file baru ──────────────────
+            if st.session_state.get("_last_file_key") != file_key:
+                st.session_state["_last_file_key"] = file_key
+                with st.spinner("🎭 Menganalisis pola visual kostum tari..."):
+                    result = model_loader.predict(model, mapping, image)
+                st.session_state["last_result"] = result
+                st.session_state["last_image_caption"] = uploaded_file.name
+                st.rerun()
 
-        if camera_file is not None:
-            try:
-                camera_img = Image.open(camera_file)
-            except Exception:
-                st.error("⚠️ Foto tidak bisa dibuka. Coba ambil ulang.")
-                camera_img = None
-
-            if camera_img is not None:
-                st.image(camera_img, caption="Pratinjau foto yang diambil")
-                new_image = camera_img
-                new_image_name = "foto_kamera.jpg"
-
-    # Tombol klasifikasi tunggal, muncul di bawah tab manapun yang aktif
-    # dan punya gambar siap diproses.
-    if new_image is not None:
-        st.markdown("")  # spasi kecil
-        classify_clicked = st.button(
-            "🔍 Klasifikasikan Gambar", use_container_width=True, type="primary"
-        )
-
-        if classify_clicked:
-            with st.spinner("Menganalisis pola visual kostum..."):
-                time.sleep(0.4)  # jeda kecil agar transisi terasa, bukan instan
-                result = model_loader.predict(model, mapping, new_image, face_detector=face_detector)
-
-            st.session_state["last_result"] = result
-            st.session_state["last_image_caption"] = new_image_name
-            st.rerun()
+    else:
+        # File dihapus / belum dipilih — bersihkan hasil lama
+        st.session_state.pop("last_result", None)
+        st.session_state.pop("_last_file_key", None)
 
 # ── TAMPILKAN HASIL ───────────────────────────────────────────────
 if "last_result" not in st.session_state:
