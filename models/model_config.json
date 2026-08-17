@@ -6,122 +6,144 @@
     224,
     3
   ],
-  "num_classes": 5,
+  "num_classes": 6,
   "class_names": [
     "Tari_Bedhaya",
     "Tari_Dolalak",
     "Tari_Gambyong",
     "Tari_Golek",
-    "Tari_Srimpi"
+    "Tari_Srimpi",
+    "Non_Tari"
   ],
   "class_labels": {
     "Tari_Bedhaya": "Tari Bedhaya",
     "Tari_Dolalak": "Tari Dolalak",
     "Tari_Gambyong": "Tari Gambyong",
     "Tari_Golek": "Tari Golek",
-    "Tari_Srimpi": "Tari Srimpi"
+    "Tari_Srimpi": "Tari Srimpi",
+    "Non_Tari": "Bukan Kostum Tari"
   },
   "dropout_rate": 0.3,
   "dense_units": 256,
   "fine_tune_at": 100,
   "keras_path": "/content/drive/MyDrive/Skripsi_Fasya/output/models/model_final.keras",
   "h5_path": "/content/drive/MyDrive/Skripsi_Fasya/output/models/model_final.h5",
-  "saved_at": "2026-06-21 15:14:47",
+  "saved_at": "2026-08-17 16:56:40",
   "evaluation": {
-    "accuracy": 0.8292682926829268,
-    "precision": 0.8301587885959721,
-    "recall": 0.8292682926829268,
-    "f1_score": 0.8290665272805805,
+    "accuracy": 0.8587786259541985,
+    "precision": 0.8637546935029518,
+    "recall": 0.8587786259541985,
+    "f1_score": 0.8595687731397845,
     "per_class_accuracy": {
-      "Tari Bedhaya": 0.8863636363636364,
-      "Tari Dolalak": 0.8863636363636364,
-      "Tari Gambyong": 0.8846153846153846,
-      "Tari Golek": 0.7567567567567568,
-      "Tari Srimpi": 0.6428571428571429
+      "Tari Bedhaya": 0.7954545454545454,
+      "Tari Dolalak": 0.8636363636363636,
+      "Tari Gambyong": 0.9038461538461539,
+      "Tari Golek": 0.8285714285714286,
+      "Tari Srimpi": 0.8787878787878788,
+      "Bukan Kostum Tari": 0.8703703703703703
     },
     "confusion_matrix": [
       [
-        39,
+        35,
         0,
-        0,
-        4,
-        1
-      ],
-      [
-        0,
-        39,
-        4,
-        1,
+        2,
+        2,
+        5,
         0
       ],
       [
+        0,
+        38,
+        3,
         1,
+        0,
+        2
+      ],
+      [
+        1,
+        1,
+        47,
+        0,
+        3,
+        0
+      ],
+      [
         2,
-        46,
+        1,
+        0,
+        29,
         2,
         1
       ],
       [
-        2,
+        1,
         0,
         2,
-        28,
-        5
+        1,
+        29,
+        0
       ],
       [
+        2,
+        2,
         3,
-        1,
-        1,
-        5,
-        18
+        0,
+        0,
+        47
       ]
     ],
     "classification_report": {
       "Tari Bedhaya": {
-        "precision": 0.8666666666666667,
-        "recall": 0.8863636363636364,
-        "f1-score": 0.8764044943820225,
+        "precision": 0.8536585365853658,
+        "recall": 0.7954545454545454,
+        "f1-score": 0.8235294117647058,
         "support": 44.0
       },
       "Tari Dolalak": {
-        "precision": 0.9285714285714286,
-        "recall": 0.8863636363636364,
-        "f1-score": 0.9069767441860465,
+        "precision": 0.9047619047619048,
+        "recall": 0.8636363636363636,
+        "f1-score": 0.8837209302325582,
         "support": 44.0
       },
       "Tari Gambyong": {
-        "precision": 0.8679245283018868,
-        "recall": 0.8846153846153846,
-        "f1-score": 0.8761904761904762,
+        "precision": 0.8245614035087719,
+        "recall": 0.9038461538461539,
+        "f1-score": 0.8623853211009175,
         "support": 52.0
       },
       "Tari Golek": {
-        "precision": 0.7,
-        "recall": 0.7567567567567568,
-        "f1-score": 0.7272727272727273,
-        "support": 37.0
+        "precision": 0.8787878787878788,
+        "recall": 0.8285714285714286,
+        "f1-score": 0.8529411764705882,
+        "support": 35.0
       },
       "Tari Srimpi": {
-        "precision": 0.72,
-        "recall": 0.6428571428571429,
-        "f1-score": 0.6792452830188679,
-        "support": 28.0
+        "precision": 0.7435897435897436,
+        "recall": 0.8787878787878788,
+        "f1-score": 0.8055555555555556,
+        "support": 33.0
       },
-      "accuracy": 0.8292682926829268,
+      "Bukan Kostum Tari": {
+        "precision": 0.94,
+        "recall": 0.8703703703703703,
+        "f1-score": 0.9038461538461539,
+        "support": 54.0
+      },
+      "accuracy": 0.8587786259541985,
       "macro avg": {
-        "precision": 0.8166325247079964,
-        "recall": 0.8113913113913116,
-        "f1-score": 0.8132179450100281,
-        "support": 205.0
+        "precision": 0.8575599112056107,
+        "recall": 0.8567777901111234,
+        "f1-score": 0.8553297581617466,
+        "support": 262.0
       },
       "weighted avg": {
-        "precision": 0.8301587885959721,
-        "recall": 0.8292682926829268,
-        "f1-score": 0.8290665272805805,
-        "support": 205.0
+        "precision": 0.8637546935029518,
+        "recall": 0.8587786259541985,
+        "f1-score": 0.8595687731397845,
+        "support": 262.0
       }
     },
-    "total_test_samples": 205,
-    "correct_predictions": 170
+    "total_test_samples": 262,
+    "correct_predictions": 225
   }
 }

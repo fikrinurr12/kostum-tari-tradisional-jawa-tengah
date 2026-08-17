@@ -1,0 +1,9 @@
+Taruh di sini hasil dari notebook training (skripsi_fasya_revisi_nontari.ipynb)
+setelah retraining dengan data Srimpi & Golek tambahan:
+
+  - model_final.h5          (atau model_final.keras)
+  - class_mapping.json
+  - model_config.json
+
+File lama (5 kelas) sengaja dihapus dari paket ini supaya tidak
+tertukar/lupa diganti dengan yang baru (6 kelas).

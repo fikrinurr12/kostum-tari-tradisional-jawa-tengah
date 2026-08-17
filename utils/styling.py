@@ -283,38 +283,23 @@ def inject_global_css():
             margin: 2rem 0;
         }}
 
-        /* =========================================================
-           STREAMLIT UI CLEANUP
-           ========================================================= */
+        /* ── Sembunyikan elemen default Streamlit yang kurang perlu */
+        #MainMenu {{visibility: hidden;}}
+        footer {{visibility: hidden;}}
+        header[data-testid="stHeader"] {{background-color: transparent;}}
 
-        header,
-        footer,
-        #MainMenu {{
-            display: none !important;
-        }}
+        /* ── Fork + GitHub icon (pojok kanan atas) ─────────────── */
+        [data-testid="stToolbar"] {{display: none !important;}}
+        .stAppToolbar {{display: none !important;}}
 
-        [data-testid="stToolbar"],
-        [data-testid="stToolbarActions"],
-        [data-testid="stDecoration"],
-        [data-testid="stHeaderActionElements"],
-        [data-testid="manage-app-button"],
-        .stAppToolbar,
-        .stAppDeployButton,
-        .viewerBadge_container__1QSob,
-        .viewerBadge_link {{
-            display: none !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-        }}
+        /* ── Watermark Streamlit (pojok kanan bawah) ────────────── */
+        [data-testid="stDecoration"] {{display: none !important;}}
+        .viewerBadge_container__1QSob {{display: none !important;}}
+        .viewerBadge_link {{display: none !important;}}
 
-        [data-testid="stAppViewContainer"] {{
-            margin-top: 0 !important;
-        }}
-
-        [data-testid="block-container"] {{
-            padding-top: 1.5rem !important;
-        }}												
+        /* ── Tombol deploy/manage app (pojok kiri bawah) ────────── */
+        [data-testid="manage-app-button"] {{display: none !important;}}
+        .stAppDeployButton {{display: none !important;}}
         
         /* ── Kurangi gap di atas navbar ──────────────────────────── */
         [data-testid="block-container"] {{

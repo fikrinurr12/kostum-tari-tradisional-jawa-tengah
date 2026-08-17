@@ -18,39 +18,67 @@ CATALOG_IMG_DIR   = os.path.join(ASSETS_DIR, "catalog")
 
 # ── PARAMETER MODEL ───────────────────────────────────────────────
 IMG_SIZE               = (224, 224)
-FALLBACK_DATASET_TOTAL = 1335
+# Perkiraan total dataset terkini (5 kostum tari + Non_Tari, setelah
+# penambahan data Srimpi & Golek pada revisi mayor). Hanya dipakai
+# sebagai fallback tampilan jika model_config.json belum berisi
+# 'dataset_total' — update angka ini setelah jumlah akhir folder
+# Tari_Golek/Tari_Srimpi di Drive dikonfirmasi.
+FALLBACK_DATASET_TOTAL = 1747
 
 # Peringatan ringan "kurang yakin" (warning, bukan penolakan)
 CONFIDENCE_THRESHOLD   = 40.0   # %
 
+# ── KELAS "NON-TARI" (revisi mayor: penolakan gambar di luar 5 kostum) ──
+# Sejak revisi mayor, model dilatih ulang sebagai classifier 6-kelas:
+# 5 kostum tari + 1 kelas eksplisit "Non_Tari" (bukan kostum tari).
+# Nilai ini HARUS PERSIS SAMA dengan key kelas tsb di class_mapping.json
+# (hasil training — lihat notebook training, Cell 4).
+NEGATIVE_CLASS_KEY = "Non_Tari"
+
+# Info tampilan untuk kelas Non_Tari — sengaja TIDAK dimasukkan ke
+# DANCE_CATALOG/CLASS_ORDER di bawah, karena kelas ini tidak punya
+# halaman katalog/detail (bukan salah satu dari 5 kostum tari).
+NON_TARI_INFO = {
+    "nama_tampilan": "Bukan Kostum Tari",
+    "warna_aksen"  : "#6B7280",  # abu-abu netral, beda dari warna 5 kostum
+}
+
 # ── DETEKSI GAMBAR DI LUAR CAKUPAN (Out-of-Distribution / OOD) ──
 #
-# Model CNN 5-kelas dengan fungsi aktivasi softmax SELALU memilih
-# salah satu dari 5 kelas meski menerima gambar yang sama sekali
-# bukan kostum tari. Untuk mendeteksi kondisi ini tanpa model atau
-# library tambahan, digunakan dua sinyal langsung dari output softmax:
+# Sejak revisi mayor, penolakan gambar non-tari dilakukan dalam DUA
+# LAPIS pertahanan:
+#
+# LAPIS 1 (utama) — Model 6-kelas dengan kelas eksplisit "Non_Tari".
+# Model dilatih langsung dengan ribuan contoh gambar bukan-kostum-tari
+# (pemandangan, orang berpakaian modern, motif batik, kostum tari
+# daerah lain), sehingga bisa mempelajari ciri pembeda sesungguhnya —
+# bukan cuma menebak dari sisa probabilitas seperti model 5-kelas lama.
+#
+# LAPIS 2 (jaring pengaman) — Threshold Maximum Softmax Probability
+# (MSP) di bawah ini, dipertahankan dari versi sebelumnya untuk
+# menangani gambar benar-benar baru yang tidak tercakup dalam data
+# latih kelas Non_Tari (Hendrycks & Gimpel, 2017):
 #
 # 1. Confidence (Maximum Softmax Probability):
 #    Ketika model mengenali objek yang dilatihnya, probabilitas kelas
 #    teratas cenderung tinggi. Untuk gambar asing, model "ragu" dan
 #    menyebarkan probabilitas ke semua kelas sehingga nilai maksimum
-#    menjadi rendah. Pendekatan ini sesuai prinsip Maximum Softmax
-#    Probability (MSP) untuk deteksi OOD (Hendrycks & Gimpel, 2017).
+#    menjadi rendah.
 #
 # 2. Margin (selisih prob_top1 - prob_top2):
 #    Model yang benar-benar yakin akan menghasilkan gap besar antara
 #    kelas terbaik dan kedua terbaik. Gap tipis mengindikasikan model
 #    dipaksa memilih tanpa keyakinan nyata.
 #
-# Gambar ditandai di luar cakupan jika SALAH SATU kondisi terpenuhi:
+# Gambar ditandai di luar cakupan (lapis 2) jika SALAH SATU terpenuhi:
 #   confidence < OOD_CONFIDENCE_THRESHOLD  ATAU
 #   margin     < OOD_MARGIN_THRESHOLD
 #
 # Threshold ditentukan empiris dari distribusi confidence score
 # pada data uji (nilai percentile ke-5 data kostum asli yang benar).
 # ─────────────────────────────────────────────────────────────────
-OOD_CONFIDENCE_THRESHOLD = 10.0   # % — di bawah ini dianggap tidak sesuai
-OOD_MARGIN_THRESHOLD     = 1.0   # % — selisih top-1 vs top-2 minimum
+OOD_CONFIDENCE_THRESHOLD = 60.0   # % — di bawah ini dianggap tidak sesuai
+OOD_MARGIN_THRESHOLD     = 15.0   # % — selisih top-1 vs top-2 minimum
 
 # ── DATA KATALOG TARI ─────────────────────────────────────────────
 DANCE_CATALOG = {

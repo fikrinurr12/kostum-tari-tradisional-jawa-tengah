@@ -129,7 +129,9 @@ with col_arch_right:
         "dilatih ulang (transfer learning) dengan dua fase: ekstraksi "
         "fitur pada lapisan dasar yang dibekukan, lalu fine-tuning pada "
         "lapisan akhir agar dapat mengenali pola visual khas lima "
-        "kostum tari tradisional Jawa Tengah.</p>",
+        "kostum tari tradisional Jawa Tengah — sekaligus mengenali gambar "
+        "yang bukan merupakan kostum tari, agar sistem tetap andal dan "
+        "kredibel sebagai media edukasi dan pelestarian budaya.</p>",
         unsafe_allow_html=True,
     )
 
@@ -209,7 +211,10 @@ if eval_data and eval_data.get("per_class_accuracy"):
 
     for label, val in per_class.items():
         class_key = label.replace(" ", "_")
-        accent = config.DANCE_CATALOG.get(class_key, {}).get("warna_aksen", styling.COLORS["terracotta"])
+        if class_key == config.NEGATIVE_CLASS_KEY or label == config.NON_TARI_INFO["nama_tampilan"]:
+            accent = config.NON_TARI_INFO["warna_aksen"]
+        else:
+            accent = config.DANCE_CATALOG.get(class_key, {}).get("warna_aksen", styling.COLORS["terracotta"])
         st.markdown(
             f"""
             <div style="display:flex; justify-content:space-between; font-size:0.95rem; margin-bottom:0.2rem;">

@@ -1,8 +1,12 @@
 """
 app.py  —  TariJateng
 Halaman Beranda: upload gambar & klasifikasi kostum tari secara real-time.
-Deteksi gambar di luar cakupan menggunakan metode Maximum Softmax Probability
-(MSP) tanpa library tambahan di luar TensorFlow/Keras.
+
+Deteksi gambar di luar cakupan (bukan kostum tari) memakai 2 lapis:
+  1. Model 6-kelas dengan kelas eksplisit "Non_Tari" (utama — lihat
+     is_non_tari di hasil prediksi).
+  2. Threshold Maximum Softmax Probability/MSP sebagai jaring pengaman
+     untuk gambar di luar cakupan data latih Non_Tari (likely_out_of_scope).
 """
 
 import time
@@ -72,43 +76,23 @@ if model_error:
 _, col_upload_center, _ = st.columns([0.3, 1.4, 0.3])
 
 with col_upload_center:
-    mode = st.radio(
-        "Sumber gambar",
-        options=["📁 Upload dari Galeri", "📷 Ambil Foto (Kamera)"],
-        horizontal=True,
-        label_visibility="collapsed",
-        key="input_mode_radio",
+    # Petunjuk khusus pengguna HP
+    st.markdown(
+        '<p class="muted-text" style="text-align:center; margin-bottom:0.6rem;">'
+        "📱 <strong>Pengguna HP:</strong> klik <em>Browse files</em> → pilih "
+        "<em>Ambil Foto</em> untuk foto langsung dari kamera asli perangkatmu.</p>",
+        unsafe_allow_html=True,
     )
 
-    uploaded_file = None
-    source_name = None
-
-    if mode == "📁 Upload dari Galeri":
-        uploaded_file = st.file_uploader(
-            "Pilih gambar",
-            type=["jpg", "jpeg", "png"],
-            label_visibility="collapsed",
-            key="file_uploader_widget",
-        )
-        if uploaded_file is not None:
-            source_name = uploaded_file.name
-    else:
-        st.markdown(
-            '<p class="muted-text" style="text-align:center; margin-bottom:0.6rem;">'
-            "Izinkan akses kamera saat browser memintanya, lalu tekan tombol "
-            "<em>Take Photo</em>.</p>",
-            unsafe_allow_html=True,
-        )
-        uploaded_file = st.camera_input(
-            "Ambil foto",
-            label_visibility="collapsed",
-            key="camera_input_widget",
-        )
-        if uploaded_file is not None:
-            source_name = "Foto Kamera"
+    uploaded_file = st.file_uploader(
+        "Pilih gambar",
+        type=["jpg", "jpeg", "png"],
+        label_visibility="collapsed",
+        key="file_uploader_widget",
+    )
 
     if uploaded_file is not None:
-        file_key = f"{mode}_{uploaded_file.name}_{uploaded_file.size}"
+        file_key = f"{uploaded_file.name}_{uploaded_file.size}"
 
         try:
             image = Image.open(uploaded_file)
@@ -117,8 +101,7 @@ with col_upload_center:
             image = None
 
         if image is not None:
-            if mode == "📁 Upload dari Galeri":
-                st.image(image, caption=f"📁 {source_name}", use_column_width=True)
+            st.image(image, caption=f"📁 {uploaded_file.name}", use_column_width=True)
 
             # ── Auto-klasifikasi jika file baru ──────────────────
             if st.session_state.get("_last_file_key") != file_key:
@@ -126,7 +109,7 @@ with col_upload_center:
                 with st.spinner("🎭 Menganalisis pola visual kostum tari..."):
                     result = model_loader.predict(model, mapping, image)
                 st.session_state["last_result"] = result
-                st.session_state["last_image_caption"] = source_name
+                st.session_state["last_image_caption"] = uploaded_file.name
                 st.rerun()
 
     else:
@@ -149,7 +132,41 @@ margin     = result["margin"]
 st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
 styling.eyebrow("Hasil Klasifikasi")
 
-# ── Gambar di luar cakupan ────────────────────────────────────────
+# ── LAPIS 1: Model secara eksplisit memprediksi kelas Non_Tari ─────
+# Ditangani TERPISAH dari blok threshold di bawah (LAPIS 2) karena ini
+# prediksi asli dari model (bisa sangat yakin), bukan sekadar kondisi
+# "ragu-ragu" — jadi pesannya dibuat lebih tegas & informatif, bukan
+# nada "kurang yakin".
+if result.get("is_non_tari"):
+    nt = config.NON_TARI_INFO
+    st.markdown(
+        f"""
+        <div class="result-card" style="--accent-color:{nt['warna_aksen']};">
+            <div class="eyebrow" style="color:{nt['warna_aksen']};">🖼️ Hasil Deteksi</div>
+            <div class="pred-title" style="color:{nt['warna_aksen']}; font-size:1.35rem;">
+                Gambar ini bukan kostum tari tradisional Jawa Tengah
+            </div>
+            <p style="margin-bottom:0.6rem;">
+                Model mengenali gambar ini sebagai <strong>bukan salah satu</strong> dari
+                5 kostum tari yang dikenalinya (Bedhaya, Dolalak, Gambyong, Golek, Srimpi),
+                dengan tingkat keyakinan <strong>{confidence:.1f}%</strong>.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.info(
+        "💡 Kalau ini seharusnya foto kostum tari, coba unggah foto yang menampilkan "
+        "kostum secara penuh dan jelas, dengan pencahayaan yang cukup."
+    )
+    if st.button("🔄 Coba Gambar Lain", use_container_width=True, key="btn_retry_nontari"):
+        del st.session_state["last_result"]
+        st.rerun()
+    styling.render_footer()
+    st.stop()
+
+# ── LAPIS 2: Threshold MSP (jaring pengaman untuk kasus di luar cakupan
+# data latih Non_Tari — lihat config.py) ────────────────────────────
 if result.get("likely_out_of_scope"):
     reason = result.get("reason", "")
 
@@ -236,7 +253,10 @@ st.markdown(
 
 with st.expander("Lihat rincian probabilitas semua kelas"):
     for cls_key, prob in result["all_probabilities"].items():
-        cls_info   = config.DANCE_CATALOG.get(cls_key, {})
+        if cls_key == config.NEGATIVE_CLASS_KEY:
+            cls_info = config.NON_TARI_INFO
+        else:
+            cls_info = config.DANCE_CATALOG.get(cls_key, {})
         label      = cls_info.get("nama_tampilan", cls_key)
         cls_accent = cls_info.get("warna_aksen", "#8B5A2B")
         st.markdown(

@@ -71,12 +71,14 @@ def predict(model, mapping, image: Image.Image) -> dict:
       1. Preprocessing: resize ke 224×224 px, preprocess_input MobileNetV2
          (normalisasi ke rentang [-1, 1] sesuai spesifikasi arsitektur).
       2. Inferensi: model.predict() menghasilkan vektor probabilitas softmax
-         untuk 5 kelas (output berukuran [1, 5]).
-      3. Deteksi OOD: dua sinyal dari output softmax:
-           a. confidence = max(probabilitas)  → rendah = model tidak yakin
-           b. margin = prob_top1 - prob_top2  → kecil = model tidak dapat membedakan
-         Gambar ditandai OOD jika salah satu sinyal di bawah threshold
-         (logika OR — lihat config.py untuk penjelasan lengkap).
+         untuk N kelas (5 kostum tari + Non_Tari, dibaca dinamis dari
+         class_mapping.json — bukan di-hardcode).
+      3. Deteksi di luar cakupan, dua lapis:
+           a. LAPIS 1: model memprediksi langsung kelas eksplisit
+              config.NEGATIVE_CLASS_KEY ("Non_Tari") — lihat is_non_tari.
+           b. LAPIS 2 (jaring pengaman): threshold confidence/margin MSP
+              untuk gambar yang tidak tercakup data latih Non_Tari —
+              lihat likely_out_of_scope (logika OR, config.py).
 
     Returns:
         dict dengan kunci:
@@ -85,7 +87,12 @@ def predict(model, mapping, image: Image.Image) -> dict:
           confidence           : float — probabilitas kelas teratas (%)
           margin               : float — selisih top-1 vs top-2 (%)
           all_probabilities    : dict  — {class_key: prob%} semua kelas
-          likely_out_of_scope  : bool  — True jika gambar diduga di luar cakupan
+          is_non_tari          : bool  — True jika model memprediksi
+                                          langsung kelas Non_Tari (lapis 1)
+          likely_out_of_scope  : bool  — True jika lolos threshold MSP
+                                          (lapis 2 — lihat catatan di app.py:
+                                          lapis ini diabaikan kalau is_non_tari
+                                          sudah True, supaya tidak dobel pesan)
           reason               : str  — "low_confidence", "low_margin", atau
                                          "low_confidence_and_margin"
     """
@@ -135,12 +142,16 @@ def predict(model, mapping, image: Image.Image) -> dict:
     class_labels = mapping.get("class_labels", {})
     pred_label   = class_labels.get(pred_key, pred_key.replace("_", " "))
 
+    # ── 8. Lapis 1: apakah model langsung memprediksi kelas Non_Tari? ──
+    is_non_tari = (pred_key == config.NEGATIVE_CLASS_KEY)
+
     return {
         "pred_class_key"    : pred_key,
         "pred_label"        : pred_label,
         "confidence"        : confidence,
         "margin"            : margin,
         "all_probabilities" : all_probs,
+        "is_non_tari"       : is_non_tari,
         "likely_out_of_scope": likely_ood,
         "reason"            : reason,
     }

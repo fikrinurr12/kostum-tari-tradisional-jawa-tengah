@@ -4,30 +4,34 @@
     "Tari_Dolalak": 1,
     "Tari_Gambyong": 2,
     "Tari_Golek": 3,
-    "Tari_Srimpi": 4
+    "Tari_Srimpi": 4,
+    "Non_Tari": 5
   },
   "idx_to_class": {
     "0": "Tari_Bedhaya",
     "1": "Tari_Dolalak",
     "2": "Tari_Gambyong",
     "3": "Tari_Golek",
-    "4": "Tari_Srimpi"
+    "4": "Tari_Srimpi",
+    "5": "Non_Tari"
   },
   "class_names": [
     "Tari_Bedhaya",
     "Tari_Dolalak",
     "Tari_Gambyong",
     "Tari_Golek",
-    "Tari_Srimpi"
+    "Tari_Srimpi",
+    "Non_Tari"
   ],
   "class_labels": {
     "Tari_Bedhaya": "Tari Bedhaya",
     "Tari_Dolalak": "Tari Dolalak",
     "Tari_Gambyong": "Tari Gambyong",
     "Tari_Golek": "Tari Golek",
-    "Tari_Srimpi": "Tari Srimpi"
+    "Tari_Srimpi": "Tari Srimpi",
+    "Non_Tari": "Bukan Kostum Tari"
   },
-  "num_classes": 5,
+  "num_classes": 6,
   "img_size": [
     224,
     224
