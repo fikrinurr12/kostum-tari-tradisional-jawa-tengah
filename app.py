@@ -76,20 +76,53 @@ if model_error:
 _, col_upload_center, _ = st.columns([0.3, 1.4, 0.3])
 
 with col_upload_center:
-    # Petunjuk khusus pengguna HP
-    st.markdown(
-        '<p class="muted-text" style="text-align:center; margin-bottom:0.6rem;">'
-        "📱 <strong>Pengguna HP:</strong> klik <em>Browse files</em> → pilih "
-        "<em>Ambil Foto</em> untuk foto langsung dari kamera asli perangkatmu.</p>",
-        unsafe_allow_html=True,
-    )
+    tab_upload, tab_camera = st.tabs(["📁 Upload Berkas", "📷 Ambil Foto"])
 
-    uploaded_file = st.file_uploader(
-        "Pilih gambar",
-        type=["jpg", "jpeg", "png"],
-        label_visibility="collapsed",
-        key="file_uploader_widget",
-    )
+    with tab_upload:
+        uploaded_from_file = st.file_uploader(
+            "Pilih gambar",
+            type=["jpg", "jpeg", "png"],
+            label_visibility="collapsed",
+            key="file_uploader_widget",
+        )
+
+    with tab_camera:
+        st.markdown(
+            '<p class="muted-text" style="text-align:center; margin-bottom:0.6rem;">'
+            "Izinkan akses kamera saat diminta oleh browser, lalu tekan tombol "
+            "ambil foto di bawah.</p>",
+            unsafe_allow_html=True,
+        )
+        uploaded_from_camera = st.camera_input(
+            "Ambil foto kostum tari",
+            label_visibility="collapsed",
+            key="camera_input_widget",
+        )
+
+    # ── Tentukan sumber gambar aktif ─────────────────────────────
+    # Dua widget ini aktif berbarengan (state masing-masing tetap
+    # tersimpan walau tab-nya tidak sedang dibuka), jadi kita perlu
+    # menentukan mana yang PALING BARU diisi pengguna, bukan sekadar
+    # "yang mana saja yang tidak kosong". Deteksinya dengan membandingkan
+    # ke _last_file_key yang sudah diproses pada rerun sebelumnya —
+    # sumber yang key-nya berubah dari situ berarti baru saja diisi/diganti.
+    def _file_key(f):
+        return f"{f.name}_{f.size}" if f is not None else None
+
+    key_file = _file_key(uploaded_from_file)
+    key_cam = _file_key(uploaded_from_camera)
+    last_processed = st.session_state.get("_last_file_key")
+
+    if key_cam and key_cam != last_processed:
+        uploaded_file = uploaded_from_camera
+    elif key_file and key_file != last_processed:
+        uploaded_file = uploaded_from_file
+    elif uploaded_from_camera is not None:
+        uploaded_file = uploaded_from_camera
+    elif uploaded_from_file is not None:
+        uploaded_file = uploaded_from_file
+    else:
+        uploaded_file = None
 
     if uploaded_file is not None:
         file_key = f"{uploaded_file.name}_{uploaded_file.size}"
