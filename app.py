@@ -178,26 +178,25 @@ styling.eyebrow("Hasil Klasifikasi")
 if result.get("is_selfie"):
     st.markdown(
         f"""
-        <div class="result-card" style="--accent-color:#A8456B;">
-            <div class="eyebrow" style="color:#A8456B;">🤳 Terdeteksi Selfie</div>
-            <div class="pred-title" style="color:#A8456B; font-size:1.35rem;">
-                Gambar ini terlihat seperti selfie, bukan foto kostum tari
+        <div class="result-card" style="--accent-color:{nt['warna_aksen']};">
+            <div class="eyebrow" style="color:{nt['warna_aksen']};">🖼️ Hasil Deteksi</div>
+            <div class="pred-title" style="color:{nt['warna_aksen']}; font-size:1.35rem;">
+                Gambar ini bukan kostum tari tradisional Jawa Tengah
             </div>
             <p style="margin-bottom:0.6rem;">
-                Sistem mendeteksi wajah yang mendominasi frame foto
-                (sekitar <strong>{result['largest_ratio']*100:.0f}%</strong> dari luas gambar).
-                Untuk klasifikasi kostum tari, foto perlu menampilkan kostum
-                secara penuh atau setengah badan.
+                Model mengenali gambar ini sebagai <strong>bukan salah satu</strong> dari
+                5 kostum tari yang dikenalinya (Bedhaya, Dolalak, Gambyong, Golek, Srimpi),
+                dengan tingkat keyakinan <strong>{confidence:.1f}%</strong>.
             </p>
         </div>
         """,
         unsafe_allow_html=True,
     )
     st.info(
-        "💡 Unggah foto yang menampilkan kostum tari secara jelas, "
-        "dengan jarak yang cukup agar seluruh atau sebagian besar kostum terlihat."
+        "💡 Kalau ini seharusnya foto kostum tari, coba unggah foto yang menampilkan "
+        "kostum secara penuh dan jelas, dengan pencahayaan yang cukup."
     )
-    if st.button("🔄 Coba Gambar Lain", use_container_width=True, key="btn_retry_selfie"):
+    if st.button("🔄 Coba Gambar Lain", use_container_width=True, key="btn_retry_nontari"):
         del st.session_state["last_result"]
         st.rerun()
     styling.render_footer()
