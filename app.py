@@ -176,6 +176,7 @@ styling.eyebrow("Hasil Klasifikasi")
 # masuk sini, "result" HANYA berisi is_selfie/num_faces/largest_ratio —
 # belum ada pred_class_key/confidence/margin sama sekali.
 if result.get("is_selfie"):
+    nt = config.NON_TARI_INFO
     st.markdown(
         f"""
         <div class="result-card" style="--accent-color:{nt['warna_aksen']};">
@@ -185,7 +186,7 @@ if result.get("is_selfie"):
             </div>
             <p style="margin-bottom:0.6rem;">
                 Model mengenali gambar ini sebagai <strong>bukan salah satu</strong> dari
-                5 kostum tari yang dikenalinya (Bedhaya, Dolalak, Gambyong, Golek, Srimpi)
+                5 kostum tari yang dikenalinya (Bedhaya, Dolalak, Gambyong, Golek, Srimpi).
             </p>
         </div>
         """,
@@ -195,7 +196,7 @@ if result.get("is_selfie"):
         "💡 Kalau ini seharusnya foto kostum tari, coba unggah foto yang menampilkan "
         "kostum secara penuh dan jelas, dengan pencahayaan yang cukup."
     )
-    if st.button("🔄 Coba Gambar Lain", use_container_width=True, key="btn_retry_nontari"):
+    if st.button("🔄 Coba Gambar Lain", use_container_width=True, key="btn_retry_selfie"):
         del st.session_state["last_result"]
         st.rerun()
     styling.render_footer()
