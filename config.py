@@ -43,6 +43,7 @@ NON_TARI_INFO = {
     "warna_aksen"  : "#6B7280",  # abu-abu netral, beda dari warna 5 kostum
 }
 
+
 # ── DETEKSI GAMBAR DI LUAR CAKUPAN (Out-of-Distribution / OOD) ──
 #
 # Sejak revisi mayor, penolakan gambar non-tari dilakukan dalam DUA

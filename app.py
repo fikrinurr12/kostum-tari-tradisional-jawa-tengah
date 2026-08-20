@@ -75,6 +75,23 @@ if model_error:
     st.stop()
 
 # ── UPLOAD & KLASIFIKASI ──────────────────────────────────────────
+def _reset_result_and_rerun():
+    """Hapus hasil klasifikasi & semua state pelacakan sumber gambar,
+    lalu rerun. Widget upload/kamera ikut direset (bukan cuma last_result)
+    supaya file yang identik pun bisa diklasifikasi ulang setelah retry."""
+    for key in (
+        "last_result",
+        "_last_file_key",
+        "_seen_file_key",
+        "_seen_cam_key",
+        "_active_source",
+        "file_uploader_widget",
+        "camera_input_widget",
+    ):
+        st.session_state.pop(key, None)
+    st.rerun()
+
+
 _, col_upload_center, _ = st.columns([0.3, 1.4, 0.3])
 
 with col_upload_center:
@@ -102,27 +119,47 @@ with col_upload_center:
         )
 
     # ── Tentukan sumber gambar aktif ─────────────────────────────
-    # Dua widget ini aktif berbarengan (state masing-masing tetap
-    # tersimpan walau tab-nya tidak sedang dibuka), jadi kita perlu
-    # menentukan mana yang PALING BARU diisi pengguna, bukan sekadar
-    # "yang mana saja yang tidak kosong". Deteksinya dengan membandingkan
-    # ke _last_file_key yang sudah diproses pada rerun sebelumnya —
-    # sumber yang key-nya berubah dari situ berarti baru saja diisi/diganti.
+    # Dua widget ini SAMA-SAMA menyimpan value-nya sendiri lintas rerun,
+    # walau tab-nya tidak sedang dibuka. Key tiap source dilacak
+    # TERPISAH (_seen_file_key / _seen_cam_key) dan dibandingkan ke
+    # histori key-nya SENDIRI — bukan dibandingkan silang ke satu
+    # _last_file_key bersama (itu penyebab bug ketumpuk: source yang
+    # tidak sedang dipakai tapi key-nya tetap beda dari _last_file_key
+    # akan selalu keliru dianggap "baru" lagi di rerun berikutnya).
     def _file_key(f):
         return f"{f.name}_{f.size}" if f is not None else None
 
     key_file = _file_key(uploaded_from_file)
     key_cam = _file_key(uploaded_from_camera)
-    last_processed = st.session_state.get("_last_file_key")
 
-    if key_cam and key_cam != last_processed:
-        uploaded_file = uploaded_from_camera
-    elif key_file and key_file != last_processed:
+    file_is_new = key_file is not None and key_file != st.session_state.get("_seen_file_key")
+    cam_is_new = key_cam is not None and key_cam != st.session_state.get("_seen_cam_key")
+
+    active_source = st.session_state.get("_active_source")
+    if file_is_new and not cam_is_new:
+        active_source = "file"
+    elif cam_is_new and not file_is_new:
+        active_source = "camera"
+    elif file_is_new and cam_is_new:
+        # Jarang terjadi (dua widget berubah di rerun yang sama) —
+        # prioritaskan kamera karena biasanya aksi paling terakhir.
+        active_source = "camera"
+
+    # Source aktif dihapus pengguna (tombol "x") → pindah ke source
+    # lain kalau masih ada isinya, atau kosongkan.
+    if active_source == "file" and key_file is None:
+        active_source = "camera" if key_cam is not None else None
+    elif active_source == "camera" and key_cam is None:
+        active_source = "file" if key_file is not None else None
+
+    st.session_state["_seen_file_key"] = key_file
+    st.session_state["_seen_cam_key"] = key_cam
+    st.session_state["_active_source"] = active_source
+
+    if active_source == "file":
         uploaded_file = uploaded_from_file
-    elif uploaded_from_camera is not None:
+    elif active_source == "camera":
         uploaded_file = uploaded_from_camera
-    elif uploaded_from_file is not None:
-        uploaded_file = uploaded_from_file
     else:
         uploaded_file = None
 
@@ -157,9 +194,13 @@ with col_upload_center:
                 st.rerun()
 
     else:
-        # File dihapus / belum dipilih — bersihkan hasil lama
+        # Kedua source kosong — bersihkan hasil & state pelacakan lama
         st.session_state.pop("last_result", None)
         st.session_state.pop("_last_file_key", None)
+        st.session_state.pop("_seen_file_key", None)
+        st.session_state.pop("_seen_cam_key", None)
+        st.session_state.pop("_active_source", None)
+
 
 # ── TAMPILKAN HASIL ───────────────────────────────────────────────
 if "last_result" not in st.session_state:
@@ -197,8 +238,7 @@ if result.get("is_selfie"):
         "kostum secara penuh dan jelas, dengan pencahayaan yang cukup."
     )
     if st.button("🔄 Coba Gambar Lain", use_container_width=True, key="btn_retry_selfie"):
-        del st.session_state["last_result"]
-        st.rerun()
+        _reset_result_and_rerun()
     styling.render_footer()
     st.stop()
 
@@ -236,8 +276,7 @@ if result.get("is_non_tari"):
         "kostum secara penuh dan jelas, dengan pencahayaan yang cukup."
     )
     if st.button("🔄 Coba Gambar Lain", use_container_width=True, key="btn_retry_nontari"):
-        del st.session_state["last_result"]
-        st.rerun()
+        _reset_result_and_rerun()
     styling.render_footer()
     st.stop()
 
@@ -290,8 +329,7 @@ if result.get("likely_out_of_scope"):
         "Tari Golek, dan Tari Srimpi."
     )
     if st.button("🔄 Coba Gambar Lain", use_container_width=True):
-        del st.session_state["last_result"]
-        st.rerun()
+        _reset_result_and_rerun()
     styling.render_footer()
     st.stop()
 
@@ -357,7 +395,6 @@ with col_a:
         st.switch_page("pages/1_Katalog.py")
 with col_b:
     if st.button("🔄 Klasifikasikan Gambar Lain", use_container_width=True):
-        del st.session_state["last_result"]
-        st.rerun()
+        _reset_result_and_rerun()
 
 styling.render_footer()
