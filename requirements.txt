@@ -9,9 +9,12 @@
 #   Streamlit Community Cloud → pilih Python 3.11
 # - Fitur deteksi gambar di luar cakupan menggunakan MSP (output model saja),
 #   tidak memerlukan library computer vision tambahan seperti OpenCV.
+# - Deteksi selfie memakai opencv-python-headless (Haar Cascade), varian
+#   headless dipakai karena server tidak punya display/GUI.
 
 streamlit==1.36.0
 tensorflow-cpu==2.20.0
 numpy>=1.26.0
 pillow==10.3.0
 matplotlib>=3.8.0
+opencv-python-headless==4.13.0.92

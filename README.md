@@ -21,6 +21,7 @@ Tari Gambyong, Tari Golek, dan Tari Srimpi.
 │   └── 3_Detail_Tari.py    # Halaman Detail Tari
 ├── utils/
 │   ├── model_loader.py     # Loading model dan prediksi (dengan deteksi OOD via MSP)
+│   ├── selfie_detector.py  # Deteksi selfie via Haar Cascade (OpenCV)
 │   └── styling.py          # CSS kustom terpusat
 └── assets/
     └── catalog/            # Gambar katalog (Tari_Bedhaya.jpg, dll.)
@@ -34,6 +35,10 @@ Tari Gambyong, Tari Golek, dan Tari Srimpi.
 
 ## Deteksi Gambar Di Luar Cakupan
 
-Menggunakan metode Maximum Softmax Probability (MSP):
-- Jika `confidence < 60%` ATAU `margin_top1_top2 < 15%` → gambar tidak dikenali
-- Threshold dapat disesuaikan di `config.py` (OOD_CONFIDENCE_THRESHOLD, OOD_MARGIN_THRESHOLD)
+- **Selfie (lapis 0)** — Haar Cascade (OpenCV) mendeteksi wajah; jika wajah
+  terbesar >= 15% dari luas gambar, ditolak sebagai selfie sebelum model
+  klasifikasi dijalankan. Threshold: `SELFIE_FACE_AREA_THRESHOLD` di `config.py`.
+- **Non-tari (lapis 1)** — Model 6-kelas dengan kelas eksplisit `Non_Tari`.
+- **MSP (lapis 2)** — Jika `confidence < 60%` ATAU `margin_top1_top2 < 15%`
+  → gambar tidak dikenali. Threshold: `OOD_CONFIDENCE_THRESHOLD`,
+  `OOD_MARGIN_THRESHOLD` di `config.py`.

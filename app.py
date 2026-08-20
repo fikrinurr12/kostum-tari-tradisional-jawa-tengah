@@ -2,7 +2,9 @@
 app.py  —  TariJateng
 Halaman Beranda: upload gambar & klasifikasi kostum tari secara real-time.
 
-Deteksi gambar di luar cakupan (bukan kostum tari) memakai 2 lapis:
+Deteksi gambar di luar cakupan (bukan kostum tari) memakai 3 lapis:
+  0. Deteksi selfie (Haar Cascade, sebelum inferensi model — lihat
+     utils/selfie_detector.py dan is_selfie di hasil prediksi).
   1. Model 6-kelas dengan kelas eksplisit "Non_Tari" (utama — lihat
      is_non_tari di hasil prediksi).
   2. Threshold Maximum Softmax Probability/MSP sebagai jaring pengaman
@@ -15,7 +17,7 @@ import streamlit as st
 from PIL import Image
 
 import config
-from utils import model_loader, styling
+from utils import model_loader, selfie_detector, styling
 
 st.set_page_config(
     page_title="TariJateng — Klasifikasi Kostum Tari Jawa Tengah",
@@ -139,8 +141,17 @@ with col_upload_center:
             # ── Auto-klasifikasi jika file baru ──────────────────
             if st.session_state.get("_last_file_key") != file_key:
                 st.session_state["_last_file_key"] = file_key
-                with st.spinner("🎭 Menganalisis pola visual kostum tari..."):
-                    result = model_loader.predict(model, mapping, image)
+
+                with st.spinner("🔍 Memeriksa gambar..."):
+                    selfie_info = selfie_detector.is_selfie(image)
+
+                if selfie_info["is_selfie"]:
+                    result = {"is_selfie": True, **selfie_info}
+                else:
+                    with st.spinner("🎭 Menganalisis pola visual kostum tari..."):
+                        result = model_loader.predict(model, mapping, image)
+                    result["is_selfie"] = False
+
                 st.session_state["last_result"] = result
                 st.session_state["last_image_caption"] = uploaded_file.name
                 st.rerun()
@@ -155,15 +166,48 @@ if "last_result" not in st.session_state:
     styling.render_footer()
     st.stop()
 
-result     = st.session_state["last_result"]
+result = st.session_state["last_result"]
+
+st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
+styling.eyebrow("Hasil Klasifikasi")
+
+# ── LAPIS 0: Gambar terdeteksi sebagai selfie/foto wajah close-up ──
+# Dicek SEBELUM inferensi model (lihat blok upload di atas), jadi kalau
+# masuk sini, "result" HANYA berisi is_selfie/num_faces/largest_ratio —
+# belum ada pred_class_key/confidence/margin sama sekali.
+if result.get("is_selfie"):
+    st.markdown(
+        f"""
+        <div class="result-card" style="--accent-color:#A8456B;">
+            <div class="eyebrow" style="color:#A8456B;">🤳 Terdeteksi Selfie</div>
+            <div class="pred-title" style="color:#A8456B; font-size:1.35rem;">
+                Gambar ini terlihat seperti selfie, bukan foto kostum tari
+            </div>
+            <p style="margin-bottom:0.6rem;">
+                Sistem mendeteksi wajah yang mendominasi frame foto
+                (sekitar <strong>{result['largest_ratio']*100:.0f}%</strong> dari luas gambar).
+                Untuk klasifikasi kostum tari, foto perlu menampilkan kostum
+                secara penuh atau setengah badan.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.info(
+        "💡 Unggah foto yang menampilkan kostum tari secara jelas, "
+        "dengan jarak yang cukup agar seluruh atau sebagian besar kostum terlihat."
+    )
+    if st.button("🔄 Coba Gambar Lain", use_container_width=True, key="btn_retry_selfie"):
+        del st.session_state["last_result"]
+        st.rerun()
+    styling.render_footer()
+    st.stop()
+
 pred_key   = result["pred_class_key"]
 pred_info  = config.DANCE_CATALOG.get(pred_key, {})
 accent     = pred_info.get("warna_aksen", "#8B5A2B")
 confidence = result["confidence"]
 margin     = result["margin"]
-
-st.markdown('<hr class="thin-divider">', unsafe_allow_html=True)
-styling.eyebrow("Hasil Klasifikasi")
 
 # ── LAPIS 1: Model secara eksplisit memprediksi kelas Non_Tari ─────
 # Ditangani TERPISAH dari blok threshold di bawah (LAPIS 2) karena ini

@@ -80,6 +80,12 @@ NON_TARI_INFO = {
 OOD_CONFIDENCE_THRESHOLD = 60.0   # % — di bawah ini dianggap tidak sesuai
 OOD_MARGIN_THRESHOLD     = 15.0   # % — selisih top-1 vs top-2 minimum
 
+# ── DETEKSI SELFIE (LAPIS 0, sebelum inferensi model) ─────────────
+# Wajah terdeteksi (Haar Cascade) dianggap selfie kalau luas wajah
+# terbesar mendominasi frame. Foto kostum tari (full/medium shot)
+# biasanya punya rasio wajah kecil meski wajah ikut terdeteksi.
+SELFIE_FACE_AREA_THRESHOLD = 0.15   # rasio luas wajah / luas gambar
+
 # ── DATA KATALOG TARI ─────────────────────────────────────────────
 DANCE_CATALOG = {
     "Tari_Bedhaya": {
