@@ -185,8 +185,7 @@ if result.get("is_selfie"):
             </div>
             <p style="margin-bottom:0.6rem;">
                 Model mengenali gambar ini sebagai <strong>bukan salah satu</strong> dari
-                5 kostum tari yang dikenalinya (Bedhaya, Dolalak, Gambyong, Golek, Srimpi),
-                dengan tingkat keyakinan <strong>{confidence:.1f}%</strong>.
+                5 kostum tari yang dikenalinya (Bedhaya, Dolalak, Gambyong, Golek, Srimpi)
             </p>
         </div>
         """,
